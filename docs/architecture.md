@@ -59,11 +59,36 @@ events(event_id PK, trace_id, event_type, payload_json, timestamp,
        duration_ms, parent_id, error)  -- indexed on trace_id
 ```
 
-## Next (Day 3)
+## Day 3 — CLI + text-based trace rendering
 
-`neurotrace.cli:main` is referenced in `pyproject.toml` but doesn't
-exist yet — needed for `neurotrace view <db_path>` to read a trace back
-via `SQLiteStorage` and render it (viewer/ is still empty). Also still
-open: an adapter (`adapters/`) that instruments a real framework
-(OpenAI function-calling first, probably) instead of requiring manual
-`tracer.llm_call(...)` calls.
+**`neurotrace list|view <db_path>`.** `cli.py` opens a `SQLiteStorage`
+and either lists trace summaries or renders one trace. `view` defaults
+to the most recently *started* trace (`list_traces()` is already
+ordered by `started_at`, so that's just the last element) when no
+`--trace-id` is given — the common case right after a run is "show me
+what just happened," not looking up an id first.
+
+**Rendering lives in `viewer/`, not `cli.py`.** `viewer/render.py`
+turns a `Trace`'s flat, `parent_id`-linked event list into an indented
+tree at read time — this is the "inferred at render time" step Day 1's
+schema note deferred. `render_trace` returns a plain string (no I/O)
+so `cli.py` just prints it and tests can assert on content directly.
+This split matters because the tree-building (`parent_id` -> children,
+depth-first walk) is exactly what a future HTML/JS timeline view will
+also need; keeping it out of the CLI means that viewer can reuse it
+instead of re-deriving the tree from scratch.
+
+**Errors are stderr + exit code 1, not exceptions.** Unknown
+`--trace-id` or an empty db are expected user-facing conditions (typo'd
+id, wrong path), not bugs — `_cmd_view`/`_cmd_list` return an int status
+and print to `sys.stderr` rather than letting a `KeyError` or similar
+surface as a traceback.
+
+## Next (Day 4)
+
+An adapter (`adapters/`) that instruments a real framework (OpenAI
+function-calling first, probably) instead of requiring manual
+`tracer.llm_call(...)` calls. The full HTML/JS timeline viewer (`viewer/`
+has only the text renderer so far) is the other open piece, but the
+adapter is more valuable next — right now every example still has to
+call the Tracer API by hand.
