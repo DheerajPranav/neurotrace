@@ -63,6 +63,44 @@ python examples/openai_agent.py && neurotrace view traces.db
 The `openai` package is not a dependency; the adapter reads responses
 structurally, so it also accepts plain dicts and OpenAI-compatible clients.
 
+## Data handling
+
+**Traces contain whatever your agent said.** Prompts, model responses, tool
+arguments, and tool results are written to the SQLite file verbatim and
+unencrypted — that's what makes a trace useful, but it means a trace of a
+run whose system prompt embeds an API key, or whose tool arguments carry
+personal data, is now a plaintext copy of that data on disk.
+
+There is no redaction hook yet. Until there is:
+
+- Keep trace files out of version control (`*.db` is already in `.gitignore`)
+- Treat a `.db` as sensitive as the conversation it recorded — don't attach
+  one to a bug report without reading it first
+- Point `SQLiteStorage` somewhere with appropriate file permissions if you're
+  tracing production runs
+
+## Tool-call safety
+
+`dispatch_tool_calls` executes functions with arguments the *model* chose, so
+it validates before it calls. Arguments are restricted to the parameters your
+tool schema actually declares, and are checked against the function signature.
+A tool call that names an unknown tool, sets a parameter the schema never
+offered, or misspells an argument becomes an errored span and is reported back
+to the model — it does not run, and it does not raise.
+
+This matters when a Python tool has parameters you never exposed:
+
+```python
+def read_file(path, allow_absolute=False):  # schema declares only `path`
+    ...
+```
+
+Without the schema check, a prompt-injected tool call setting
+`allow_absolute=True` would reach that default. Pass your schemas to
+`create(tools=...)` as usual and the check is automatic. Note it bounds
+argument *names*, not values — validating that `path` is in an allowed
+directory is still your tool's job.
+
 ## Project layout
 
 ```

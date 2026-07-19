@@ -130,6 +130,39 @@ bug behind a trace entry. Same reasoning for `_parse_arguments` keeping
 malformed JSON under `_raw` instead of raising: unparseable tool arguments
 are a symptom to capture, and a decode error would destroy the evidence.
 
+## Day 4a — tool-call validation (security follow-up)
+
+Review before making the repo public turned up two problems with
+`fn(**args)`, both from splatting model-controlled JSON straight into a
+Python callable.
+
+**The tool schema is a security boundary, so it's now enforced.** A
+parameter that exists on the Python function was model-settable even when
+the schema never offered it — a `read_file(path, allow_absolute=False)`
+whose schema declares only `path` could be called with
+`allow_absolute=True` by a prompt-injected tool call. Arguments are now
+restricted to the properties the schema declares. The schemas don't need
+a new parameter: they were already passed to `create(tools=...)`, so the
+proxy records them and `dispatch_tool_calls` defaults to them. Unknown
+schema (none sent, or no `properties`) means *skip the check*, not *deny
+everything* — denying would break every caller who never passed one, and
+this check is a bound on model-chosen names, not an authorization system.
+It bounds names only; validating values stays the tool's job.
+
+**Bad arguments were fatal, which contradicted the Day 4 rule.** Day 4
+established that a hallucinated tool *name* is trace data rather than a
+traceback, but a hallucinated *argument* name still escaped as a
+`TypeError` from `fn(**args)` and killed the agent loop — the same class
+of model error, one level down, handled the opposite way. `signature.bind`
+now catches unexpected and missing arguments before the call, so every
+"the model got the call wrong" case lands in the same errored-span path.
+Tools that raise while *executing* still propagate: that's the caller's
+code failing, and swallowing it would hide a real bug behind a trace entry.
+
+The split is now cleanly "wrong call" (recorded, fed back, recoverable)
+vs. "broken tool" (raised), where before it was drawn accidentally at
+whichever line happened to throw first.
+
 ## Next (Day 5)
 
 The HTML/JS timeline viewer — `viewer/` still has only the text renderer,

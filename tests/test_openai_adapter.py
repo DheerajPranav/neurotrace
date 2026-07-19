@@ -200,6 +200,78 @@ def test_dict_responses_work_without_the_sdk_types():
     assert llm_event.payload["prompt_tokens"] == 3
 
 
+def _schema(name, *properties):
+    return {
+        "type": "function",
+        "function": {
+            "name": name,
+            "parameters": {
+                "type": "object",
+                "properties": {p: {"type": "string"} for p in properties},
+            },
+        },
+    }
+
+
+def _dispatch_one(tool_calls, tools, schemas=None):
+    """Run one scripted completion + dispatch, returning (content, tracer)."""
+    tracer = Tracer(name="run")
+    client = trace_openai(FakeClient([FakeResponse(FakeMessage(tool_calls=tool_calls))]), tracer)
+    with tracer:
+        response = client.chat.completions.create(
+            model="gpt-4o", messages=[], **({"tools": schemas} if schemas else {})
+        )
+        results = client.dispatch_tool_calls(response, tools)
+    return results[0]["content"], tracer
+
+
+def test_argument_not_offered_by_the_schema_is_refused():
+    """A parameter the schema never advertised must not be model-settable.
+
+    `allow_absolute` exists on the function but was never offered to the model,
+    so a tool call setting it is prompt injection reaching a privileged default.
+    """
+    calls = [FakeToolCall("c1", "read_file", '{"path": "/etc/passwd", "allow_absolute": true}')]
+
+    def read_file(path, allow_absolute=False):
+        return f"read {path} absolute={allow_absolute}"
+
+    content, tracer = _dispatch_one(
+        calls, {"read_file": read_file}, schemas=[_schema("read_file", "path")]
+    )
+
+    assert "not offered by the tool schema: allow_absolute" in content
+    assert "read /etc/passwd" not in content, "the tool must not have run"
+    assert any(e.event_type == EventType.ERROR for e in tracer.trace.events)
+
+
+def test_unexpected_argument_name_does_not_kill_the_loop():
+    calls = [FakeToolCall("c1", "get_weather", '{"city": "Lisbon", "units": "F"}')]
+    content, _ = _dispatch_one(calls, {"get_weather": lambda city: city})
+    assert content.startswith("error:")
+
+
+def test_missing_required_argument_is_reported_not_raised():
+    calls = [FakeToolCall("c1", "get_weather", "{}")]
+    content, _ = _dispatch_one(calls, {"get_weather": lambda city: city})
+    assert "missing a required argument" in content
+
+
+def test_schema_checking_is_skipped_when_no_schemas_were_sent():
+    """Callers who never pass `tools=` keep working — unknown means skip, not deny."""
+    calls = [FakeToolCall("c1", "search", '{"q": "cats"}')]
+    content, _ = _dispatch_one(calls, {"search": lambda q: f"found {q}"})
+    assert content == "found cats"
+
+
+def test_declared_arguments_still_run_normally():
+    calls = [FakeToolCall("c1", "get_weather", '{"city": "Lisbon"}')]
+    content, _ = _dispatch_one(
+        calls, {"get_weather": lambda city: f"{city}: sunny"}, schemas=[_schema("get_weather", "city")]
+    )
+    assert content == "Lisbon: sunny"
+
+
 def test_uninstrumented_attributes_fall_through_to_the_real_client():
     tracer = Tracer(name="run")
     client = trace_openai(FakeClient([]), tracer)
