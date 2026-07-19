@@ -34,6 +34,7 @@ def _utcnow() -> datetime:
 class LLMCallHandle:
     model: str
     prompt: str
+    event_id: str
     prompt_tokens: int = 0
     response: str = ""
     completion_tokens: int = 0
@@ -43,6 +44,7 @@ class LLMCallHandle:
 class ToolCallHandle:
     tool_name: str
     args: dict[str, Any]
+    event_id: str
     result: Any = None
 
 
@@ -70,9 +72,27 @@ class Tracer:
         return False
 
     @contextmanager
+    def under(self, parent_id: str | None) -> Iterator[None]:
+        """Attach spans opened inside this block to `parent_id`.
+
+        Lexical nesting covers the common case, but an adapter often learns
+        the parent after the fact: an OpenAI response *requests* tool calls
+        that only run once `create()` has already returned, so the tool spans
+        are siblings of the llm_call span lexically even though they belong
+        under it. Pushing the id explicitly re-parents them.
+        """
+        self._parent_stack.append(parent_id)
+        try:
+            yield
+        finally:
+            self._parent_stack.pop()
+
+    @contextmanager
     def llm_call(self, model: str, prompt: str, prompt_tokens: int = 0) -> Iterator[LLMCallHandle]:
-        handle = LLMCallHandle(model=model, prompt=prompt, prompt_tokens=prompt_tokens)
         event_id = str(uuid.uuid4())
+        handle = LLMCallHandle(
+            model=model, prompt=prompt, prompt_tokens=prompt_tokens, event_id=event_id
+        )
         parent_id = self._parent_stack[-1]
         self._parent_stack.append(event_id)
         start = time.perf_counter()
@@ -101,8 +121,8 @@ class Tracer:
 
     @contextmanager
     def tool_call(self, tool_name: str, args: dict[str, Any]) -> Iterator[ToolCallHandle]:
-        handle = ToolCallHandle(tool_name=tool_name, args=args)
         event_id = str(uuid.uuid4())
+        handle = ToolCallHandle(tool_name=tool_name, args=args, event_id=event_id)
         parent_id = self._parent_stack[-1]
         self._parent_stack.append(event_id)
         start = time.perf_counter()

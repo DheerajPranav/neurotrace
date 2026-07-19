@@ -84,11 +84,59 @@ id, wrong path), not bugs — `_cmd_view`/`_cmd_list` return an int status
 and print to `sys.stderr` rather than letting a `KeyError` or similar
 surface as a traceback.
 
-## Next (Day 4)
+## Day 4 — OpenAI adapter
 
-An adapter (`adapters/`) that instruments a real framework (OpenAI
-function-calling first, probably) instead of requiring manual
-`tracer.llm_call(...)` calls. The full HTML/JS timeline viewer (`viewer/`
-has only the text renderer so far) is the other open piece, but the
-adapter is more valuable next — right now every example still has to
-call the Tracer API by hand.
+**`trace_openai(client, tracer)` returns a proxy, not a patch.** The
+alternative was monkeypatching `openai.resources.chat.Completions.create`
+globally. A proxy loses the ability to trace a client the user constructed
+somewhere you can't reach, but it's explicit about what's traced, nests
+correctly when two tracers are alive at once, and doesn't break when the
+SDK reorganizes its internals. `__getattr__` delegates everything
+uninstrumented to the real client, so the proxy is a drop-in and the
+agent loop in `examples/openai_agent.py` contains no NeuroTrace calls at
+all — only the construction line changes.
+
+**The `openai` package is never imported.** Response fields are read
+structurally through `_get`, which handles both mappings and attribute
+objects. This keeps `openai` out of `pyproject.toml` for a library whose
+job is observing agents rather than calling them, and it means the same
+adapter accepts pydantic SDK models, `model_dump()` dicts, recorded
+fixtures, and OpenAI-compatible clients from other vendors. The tests
+run against hand-written fakes with no SDK installed, which is also the
+honest way to test this — a mock of the SDK's types would be asserting
+against our own guesses either way.
+
+**`Tracer.under(parent_id)` exists because of an ordering mismatch.**
+Day 2's parent tracking is lexical: a span is a child of whatever span
+encloses it. But an OpenAI response *requests* tool calls that only run
+after `create()` has already returned and closed its span, so the tool
+calls are lexical siblings of the completion that caused them. The
+adapter records each completion's `event_id` (now exposed on the span
+handle) and re-parents the dispatched tools under it. Without this the
+timeline is a flat alternating list of llm/tool spans with the causal
+link — *this* call asked for *that* tool — thrown away, which is most of
+what makes the tree worth rendering. Note this makes event list order
+(spans append on close) differ from tree order; the renderer already
+walks by `parent_id`, so it doesn't care.
+
+**Hallucinated tool vs. broken tool are handled differently, on purpose.**
+A tool call naming a tool that doesn't exist records an errored span and
+returns the error to the model as the tool's result, letting the loop
+continue. A tool that raises while executing propagates unmodified.
+The asymmetry is that the first is agent behaviour NeuroTrace exists to
+show you — it belongs in the trace, not in a traceback — while the second
+is ordinary application code failing, and swallowing it would hide a real
+bug behind a trace entry. Same reasoning for `_parse_arguments` keeping
+malformed JSON under `_raw` instead of raising: unparseable tool arguments
+are a symptom to capture, and a decode error would destroy the evidence.
+
+## Next (Day 5)
+
+The HTML/JS timeline viewer — `viewer/` still has only the text renderer,
+and `_build_children` is already the tree-building step a real UI needs
+(that split was the point of Day 3). FastAPI and uvicorn have been
+dependencies since Day 1 for exactly this. Streaming responses are the
+known gap in the adapter: `create(stream=True)` returns an iterator, so
+the current code records an empty response and a duration that only
+measures time-to-first-chunk. Wrapping the iterator to accumulate deltas
+and close the span at the end is the fix, and it wants its own day.
