@@ -187,13 +187,78 @@ the provider-specific config sits in one dataclass and the agent loop
 stays identical across all of them — which is also the clearest available
 demonstration of the portability claim.
 
-## Next (Day 5)
+## Day 5 — JSON API server
 
-The HTML/JS timeline viewer — `viewer/` still has only the text renderer,
-and `_build_children` is already the tree-building step a real UI needs
-(that split was the point of Day 3). FastAPI and uvicorn have been
-dependencies since Day 1 for exactly this. Streaming responses are the
-known gap in the adapter: `create(stream=True)` returns an iterator, so
-the current code records an empty response and a duration that only
-measures time-to-first-chunk. Wrapping the iterator to accumulate deltas
-and close the span at the end is the fix, and it wants its own day.
+**`create_app(db_path)` returns an app, not a module-level `app`.** The
+usual FastAPI shape is a global instantiated at import time, which would
+force the db path in through an environment variable and make two apps
+over two different databases impossible. A factory keeps the path an
+argument, which is also what lets the tests run several apps in one
+process without touching global state.
+
+**A connection per request, not the shared one `SQLiteStorage` already
+holds.** FastAPI runs sync endpoints in a worker threadpool, and sqlite3
+refuses a connection used from a thread other than the one that created
+it — so reusing the tracer's single-connection design raises
+`ProgrammingError` on whichever request happens to land on a second
+thread. Opening per request costs microseconds against a local file and
+leaves the server with no shared mutable state. Verified by a test that
+issues repeated requests rather than one, since a single request passes
+either way.
+
+**Missing db is an error, not an empty result.** `SQLiteStorage` creates
+its schema on connect, so pointing the server at a typo'd path would
+otherwise produce a new empty database and an API reporting zero traces —
+the failure looks like "no traces recorded" instead of "wrong path."
+`create_app` raises `FileNotFoundError`; the CLI turns that into
+stderr + exit 1, consistent with Day 3's rule that user-facing conditions
+aren't tracebacks.
+
+**Flat and tree are separate endpoints.** `/api/traces/{id}` serves the
+events as stored, `/api/traces/{id}/tree` serves them nested. Both exist
+because they answer different questions: the flat form is what the
+storage layer actually holds (and what an exporter or a diff would want),
+the tree is what a timeline draws. Resolving nesting server-side means
+Day 6's UI renders a structure instead of re-deriving one — and it's the
+same resolution the text renderer does, so `_build_children` moved out of
+`render.py` into `viewer/tree.py` rather than being reimplemented in JS.
+That split was the stated point of Day 3; this is the day it paid off.
+
+**`children_by_parent` now re-attaches orphans as roots.** An event whose
+`parent_id` names an event not present in the trace was previously
+unreachable from the root walk and silently dropped from the timeline.
+A partial save shouldn't make spans disappear — losing an event's nesting
+is a much smaller lie than losing the event.
+
+**No pydantic response models.** Endpoints return the same dicts
+`to_dict()` already produces. Mirroring the event schema in pydantic
+would reintroduce exactly the per-type rigidity Day 1 rejected, on a
+`payload` that is deliberately free-form, and it would have to be
+rewritten for every adapter that shapes a payload differently.
+
+**Read-only, loopback by default.** There are no write endpoints — writes
+belong to `Tracer`, in the process being traced. The default bind is
+`127.0.0.1` rather than `0.0.0.0` because a trace holds prompts, tool
+arguments, and results verbatim (see README "Data handling"); serving
+that to the local network by default would be a poor trade for
+convenience. No CORS middleware either: Day 6's UI will be served by this
+same app, so permissive cross-origin headers would only widen who can
+read the traces without enabling anything the project needs.
+
+**Summaries got their own storage method.** `/api/traces` wants "which
+runs are here and did any fail," and answering it through `list_traces()`
+loads every event of every run — one full load per trace, per request.
+`list_trace_summaries()` is one aggregate query with counts.
+`TraceStorage` provides a concrete default derived from `list_traces()`,
+so it's an opt-in optimization rather than a new abstract method that
+breaks other backends. `neurotrace list` uses it too, and now shows event
+and error counts.
+
+## Next (Day 6)
+
+The HTML/JS timeline itself, served as a static asset by this app against
+`/api/traces/{id}/tree`. Streaming responses remain the known gap in the
+adapter: `create(stream=True)` returns an iterator, so the current code
+records an empty response and a duration that only measures
+time-to-first-chunk — wrapping the iterator to accumulate deltas and close
+the span at the end is the fix, and it still wants its own day.

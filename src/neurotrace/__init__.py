@@ -1,5 +1,10 @@
 from neurotrace.core.events import Event, EventType, Trace
-from neurotrace.core.storage import InMemoryStorage, SQLiteStorage, TraceStorage
+from neurotrace.core.storage import (
+    InMemoryStorage,
+    SQLiteStorage,
+    TraceStorage,
+    TraceSummary,
+)
 from neurotrace.core.tracer import Tracer
 
 __all__ = [
@@ -8,6 +13,7 @@ __all__ = [
     "Trace",
     "Tracer",
     "TraceStorage",
+    "TraceSummary",
     "InMemoryStorage",
     "SQLiteStorage",
 ]

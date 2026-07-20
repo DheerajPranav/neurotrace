@@ -16,9 +16,9 @@ can inspect it after the fact instead of re-running blind.
 ## Status
 
 Early build, in progress (v0.1.0 not yet tagged). Capture, storage, the
-OpenAI adapter, and a terminal timeline work today; the HTML viewer and
-streaming support don't yet. See `docs/architecture.md` for design notes
-as they're written.
+OpenAI adapter, a terminal timeline, and a read-only JSON API work today;
+the HTML viewer and streaming support don't yet. See `docs/architecture.md`
+for design notes as they're written.
 
 ## Usage
 
@@ -59,6 +59,30 @@ scripted client, so no API key is needed:
 ```bash
 python examples/openai_agent.py && neurotrace view traces.db
 ```
+
+## HTTP API
+
+`neurotrace serve traces.db` exposes the same traces as read-only JSON, for
+tooling that wants the data rather than the text timeline (and for the
+browser viewer, which is next):
+
+```console
+$ neurotrace serve traces.db
+serving traces.db on http://127.0.0.1:8756  (ctrl-c to stop)
+```
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/traces` | every run, with event and error counts, no payloads |
+| `GET /api/traces/{id}` | one run, events flat as stored (`parent_id` links) |
+| `GET /api/traces/{id}/tree` | one run, events nested the way the timeline draws them |
+| `GET /api/traces/{id}/text` | the same output `neurotrace view` prints |
+| `GET /docs` | generated API docs |
+
+There are no write endpoints — traces are written by `Tracer`, in the process
+being traced. The server binds to loopback by default: a trace holds prompts
+and tool arguments verbatim, so exposing it on the network is a decision you
+make explicitly with `--host`.
 
 The `openai` package is not a dependency; the adapter reads responses
 structurally, so it also accepts plain dicts and OpenAI-compatible clients.
@@ -133,7 +157,7 @@ directory is still your tool's job.
 src/neurotrace/
 ├── core/       # event schema, tracer, storage
 ├── adapters/   # framework-specific instrumentation (OpenAI, LangChain, ...)
-└── viewer/     # server + timeline UI
+└── viewer/     # tree building, text renderer, JSON API server (UI next)
 examples/       # runnable example agents
 tests/
 docs/

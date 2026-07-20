@@ -5,11 +5,15 @@ Day 3 scope is a terminal renderer, not the full timeline UI promised by
 today, and the tree-building logic (parent_id -> children) is the same logic
 a future HTML/JS viewer will need, so it's factored out here rather than
 inlined in the CLI.
+
+Day 5 collected that step into `tree.py` once the API server became its
+second caller; this module now only handles presentation.
 """
 
 from __future__ import annotations
 
 from neurotrace.core.events import Event, Trace
+from neurotrace.viewer.tree import children_by_parent
 
 _BRANCH = "├─ "
 _LAST_BRANCH = "└─ "
@@ -36,13 +40,6 @@ def _summarize(event: Event) -> str:
     return summary
 
 
-def _build_children(events: list[Event]) -> dict[str | None, list[Event]]:
-    children: dict[str | None, list[Event]] = {}
-    for event in events:
-        children.setdefault(event.parent_id, []).append(event)
-    return children
-
-
 def _render_children(
     children: dict[str | None, list[Event]],
     parent_id: str | None,
@@ -67,7 +64,7 @@ def render_trace(trace: Trace) -> str:
     if not trace.events:
         return header + "\n  (no events)"
 
-    children = _build_children(trace.events)
+    children = children_by_parent(trace.events)
     lines: list[str] = []
     _render_children(children, None, "", lines)
     return header + "\n" + "\n".join(lines)

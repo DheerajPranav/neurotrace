@@ -11,10 +11,42 @@ from __future__ import annotations
 import json
 import sqlite3
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from neurotrace.core.events import Event, EventType, Trace
+
+
+@dataclass
+class TraceSummary:
+    """One trace's headline facts, without its events.
+
+    A list view wants "which runs are in this file, and did any of them go
+    wrong" — not every prompt and response in all of them. Loading full traces
+    to answer that is the difference between one query and one query per run,
+    which the API server's list endpoint would otherwise pay on every request.
+    """
+
+    trace_id: str
+    name: str
+    started_at: datetime
+    ended_at: datetime | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    event_count: int = 0
+    error_count: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "trace_id": self.trace_id,
+            "name": self.name,
+            "started_at": self.started_at.isoformat(),
+            "ended_at": self.ended_at.isoformat() if self.ended_at else None,
+            "metadata": self.metadata,
+            "event_count": self.event_count,
+            "error_count": self.error_count,
+        }
 
 
 class TraceStorage(ABC):
@@ -26,6 +58,26 @@ class TraceStorage(ABC):
 
     @abstractmethod
     def list_traces(self) -> list[Trace]: ...
+
+    def list_trace_summaries(self) -> list[TraceSummary]:
+        """Headline facts for every stored trace, newest last.
+
+        Concrete rather than abstract: the correct-but-slow answer is derivable
+        from `list_traces`, so backends opt into a cheaper query instead of
+        being broken by a new required method.
+        """
+        return [
+            TraceSummary(
+                trace_id=trace.trace_id,
+                name=trace.name,
+                started_at=trace.started_at,
+                ended_at=trace.ended_at,
+                metadata=trace.metadata,
+                event_count=len(trace.events),
+                error_count=sum(1 for event in trace.events if event.error),
+            )
+            for trace in self.list_traces()
+        ]
 
 
 class InMemoryStorage(TraceStorage):
@@ -160,6 +212,32 @@ class SQLiteStorage(TraceStorage):
             if trace is not None:
                 traces.append(trace)
         return traces
+
+    def list_trace_summaries(self) -> list[TraceSummary]:
+        """One aggregate query instead of a full load per trace."""
+        rows = self._conn.execute(
+            """
+            SELECT t.trace_id, t.name, t.started_at, t.ended_at, t.metadata_json,
+                   COUNT(e.event_id),
+                   COALESCE(SUM(CASE WHEN e.error IS NOT NULL THEN 1 ELSE 0 END), 0)
+            FROM traces t
+            LEFT JOIN events e ON e.trace_id = t.trace_id
+            GROUP BY t.trace_id
+            ORDER BY t.started_at
+            """
+        ).fetchall()
+        return [
+            TraceSummary(
+                trace_id=row[0],
+                name=row[1],
+                started_at=datetime.fromisoformat(row[2]),
+                ended_at=datetime.fromisoformat(row[3]) if row[3] else None,
+                metadata=json.loads(row[4]),
+                event_count=row[5],
+                error_count=row[6],
+            )
+            for row in rows
+        ]
 
     def close(self) -> None:
         self._conn.close()
