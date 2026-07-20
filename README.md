@@ -63,6 +63,32 @@ python examples/openai_agent.py && neurotrace view traces.db
 The `openai` package is not a dependency; the adapter reads responses
 structurally, so it also accepts plain dicts and OpenAI-compatible clients.
 
+## Providers
+
+The adapter targets the OpenAI *wire format*, not the OpenAI *service*, so
+any provider exposing an OpenAI-compatible endpoint works with the same
+code. Only `base_url` and the model name change:
+
+```python
+client = trace_openai(OpenAI(base_url="https://api.groq.com/openai/v1",
+                             api_key=os.environ["GROQ_API_KEY"]), tracer)
+```
+
+| Provider | `base_url` | Cost |
+|---|---|---|
+| OpenAI | `https://api.openai.com/v1` | paid |
+| xAI (Grok) | `https://api.x.ai/v1` | paid |
+| Groq | `https://api.groq.com/openai/v1` | free tier |
+| Ollama | `http://localhost:11434/v1` | free, runs locally |
+
+`examples/openai_agent.py --provider {openai,xai,groq,ollama}` runs against
+any of them; with no flag it uses a scripted offline client and needs no key.
+Tool calling has to be supported by the specific model you pick — most
+small local models don't do it well, or at all.
+
+Note that `--provider` needs `pip install openai`, used purely as an HTTP
+client for the shared format. NeuroTrace itself still doesn't depend on it.
+
 ## Data handling
 
 **Traces contain whatever your agent said.** Prompts, model responses, tool

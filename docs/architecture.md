@@ -163,6 +163,30 @@ The split is now cleanly "wrong call" (recorded, fed back, recoverable)
 vs. "broken tool" (raised), where before it was drawn accidentally at
 whichever line happened to throw first.
 
+## Day 4b — provider portability (no adapter changes)
+
+Switching off OpenAI (cost) turned out to need **zero** adapter changes,
+which is the Day 4 "never import `openai`, read fields structurally"
+decision paying off earlier than expected. xAI, Groq, and Ollama all
+expose OpenAI-compatible endpoints, so a `base_url` swap is the whole
+migration; tracing, token capture, tool dispatch, and schema validation
+were verified unmodified against all three response shapes.
+
+Worth stating plainly since the module is named `adapters/openai.py`:
+**it targets the wire format, not the vendor.** Renaming it to something
+like `openai_compatible.py` would be more literally accurate, but the
+format genuinely is OpenAI's — every other vendor documents themselves as
+compatible *with* it — and a rename is a breaking import change for no
+functional gain. Keeping the name and documenting the distinction is the
+better trade until there's a second, genuinely different protocol to
+adapt (Anthropic's `input_tokens`/`output_tokens` and content-block
+shape would be that, and it'd be a sibling module rather than a rewrite).
+
+The example grew a `--provider` table rather than a bare `--live` flag, so
+the provider-specific config sits in one dataclass and the agent loop
+stays identical across all of them — which is also the clearest available
+demonstration of the portability claim.
+
 ## Next (Day 5)
 
 The HTML/JS timeline viewer — `viewer/` still has only the text renderer,
