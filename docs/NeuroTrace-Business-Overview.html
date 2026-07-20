@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NeuroTrace — Project Overview</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+  @page :first { margin: 0; }
+
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.2pt; line-height: 1.55; color: #1a1d21; margin: 0;
+  }
+
+  /* ---------- cover ---------- */
+  .cover {
+    height: 297mm; width: 210mm; padding: 34mm 24mm;
+    background: #0f1620; color: #fff;
+    display: flex; flex-direction: column; justify-content: space-between;
+    page-break-after: always;
+  }
+  .cover .eyebrow { font-size: 9pt; letter-spacing: .22em; text-transform: uppercase; color: #6ea8fe; }
+  .cover h1 { font-size: 46pt; line-height: 1.02; margin: 14mm 0 0; font-weight: 700; letter-spacing: -.02em; }
+  .cover .sub { font-size: 14pt; color: #b9c4d2; margin-top: 7mm; max-width: 132mm; line-height: 1.45; }
+  .cover .rule { width: 46mm; height: 3px; background: #6ea8fe; margin: 10mm 0 0; }
+  .cover .meta { font-size: 9.5pt; color: #8794a6; border-top: 1px solid #2b3543; padding-top: 5mm; }
+  .cover .meta strong { color: #d7dee8; font-weight: 600; }
+  .cover .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm; }
+
+  /* ---------- structure ---------- */
+  h2 {
+    font-size: 16pt; margin: 11mm 0 4mm; padding-bottom: 2.2mm; font-weight: 700;
+    border-bottom: 2px solid #0f1620; letter-spacing: -.01em; page-break-after: avoid;
+  }
+  h2 .n { color: #4a76c4; margin-right: 3mm; }
+  h3 { font-size: 11.6pt; margin: 6mm 0 2mm; font-weight: 700; color: #10233f; page-break-after: avoid; }
+  h4 { font-size: 10.2pt; margin: 4mm 0 1.5mm; font-weight: 700; color: #33404f; page-break-after: avoid; }
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 5.5mm; }
+  li { margin-bottom: 1.6mm; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: .89em; background: #eef1f5; padding: .5mm 1.2mm; border-radius: 2px; }
+  pre {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.4pt; line-height: 1.5;
+    background: #0f1620; color: #dfe6ef; padding: 4mm 5mm; border-radius: 3px;
+    overflow-x: auto; margin: 0 0 4mm; page-break-inside: avoid;
+  }
+  pre .c { color: #7f92a8; }
+  pre .k { color: #6ea8fe; }
+  pre .s { color: #8fd39a; }
+  .sec { page-break-inside: auto; }
+  .pb { page-break-before: always; }
+  .avoid { page-break-inside: avoid; }
+
+  /* ---------- tables ---------- */
+  table { width: 100%; border-collapse: collapse; margin: 0 0 4mm; font-size: 9.2pt; page-break-inside: avoid; }
+  th { background: #0f1620; color: #fff; text-align: left; padding: 2.2mm 2.6mm; font-weight: 600; font-size: 8.8pt; letter-spacing: .02em; }
+  td { padding: 2.2mm 2.6mm; border-bottom: 1px solid #dde3ea; vertical-align: top; }
+  tbody tr:nth-child(even) td { background: #f6f8fa; }
+  td code { background: #e4e9f0; }
+
+  /* ---------- callouts ---------- */
+  .box { border-left: 3px solid #4a76c4; background: #f2f6fc; padding: 3.5mm 4.5mm; margin: 0 0 4mm; page-break-inside: avoid; }
+  .box.warn { border-left-color: #c9772c; background: #fdf6ef; }
+  .box.risk { border-left-color: #b8404a; background: #fdf1f2; }
+  .box .lbl { font-size: 8pt; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: #4a76c4; display: block; margin-bottom: 1.5mm; }
+  .box.warn .lbl { color: #a5601f; }
+  .box.risk .lbl { color: #a2333c; }
+  .box p:last-child { margin-bottom: 0; }
+
+  .fig { margin: 0 0 5mm; page-break-inside: avoid; }
+  .fig svg { width: 100%; height: auto; display: block; }
+  .cap { font-size: 8.4pt; color: #5c6773; margin-top: 1.5mm; font-style: italic; }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin: 0 0 5mm; }
+  .kpi { border: 1px solid #dde3ea; border-top: 3px solid #4a76c4; padding: 3mm; text-align: center; }
+  .kpi .v { font-size: 17pt; font-weight: 700; color: #0f1620; line-height: 1.1; }
+  .kpi .l { font-size: 7.6pt; color: #5c6773; text-transform: uppercase; letter-spacing: .06em; margin-top: 1mm; }
+
+  .toc { font-size: 10pt; }
+  .toc li { margin-bottom: 2mm; }
+  .toc .t { font-weight: 600; }
+  .toc .d { color: #5c6773; font-size: 9pt; }
+
+  .pill { display: inline-block; font-size: 7.6pt; font-weight: 700; padding: .6mm 2mm; border-radius: 8px; letter-spacing: .04em; }
+  .p-ok { background: #dcf0e0; color: #1f6b32; }
+  .p-no { background: #f6dcde; color: #8f2b34; }
+  .p-part { background: #fbeed6; color: #8a5a15; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════ COVER ══════════════════════════ -->
+<div class="cover">
+  <div>
+    <div class="eyebrow">Project Documentation · Internal</div>
+    <h1>NeuroTrace</h1>
+    <div class="rule"></div>
+    <div class="sub">An observability layer for AI agent execution — capture every LLM call, tool call, and failure an agent makes, then inspect the run instead of re-running it blind.</div>
+  </div>
+  <div class="meta">
+    <div class="meta-grid">
+      <div><strong>Version</strong><br>0.1.0 (pre-release)</div>
+      <div><strong>Status</strong><br>Day 5 of 7 · API complete</div>
+      <div><strong>Date</strong><br>20 July 2026</div>
+      <div><strong>Owner</strong><br>Dheeraj Pranav</div>
+      <div><strong>Language</strong><br>Python ≥ 3.10</div>
+      <div><strong>Repository</strong><br>github.com/DheerajPranav/neurotrace</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ TOC ══════════════════════════ -->
+<h2><span class="n">—</span>Contents</h2>
+<ol class="toc">
+  <li><span class="t">Executive Summary</span> — <span class="d">what this is, in one page</span></li>
+  <li><span class="t">The Problem We Are Solving</span> — <span class="d">the business cost of opaque agents</span></li>
+  <li><span class="t">The Product</span> — <span class="d">what NeuroTrace does and who it serves</span></li>
+  <li><span class="t">Architecture</span> — <span class="d">layers, data flow, sequence, data model</span></li>
+  <li><span class="t">Component Walkthrough</span> — <span class="d">every file, its job, its business value</span></li>
+  <li><span class="t">Key Engineering Decisions</span> — <span class="d">the trade-offs and why they were made</span></li>
+  <li><span class="t">Capabilities</span> — <span class="d">what works today, verified</span></li>
+  <li><span class="t">Competitive Advantages</span> — <span class="d">why this instead of the alternatives</span></li>
+  <li><span class="t">Limitations &amp; Risks</span> — <span class="d">an honest register of what it cannot do</span></li>
+  <li><span class="t">Roadmap</span> — <span class="d">Days 5–7 and beyond</span></li>
+  <li><span class="t">Why We Are Doing This</span> — <span class="d">strategic rationale</span></li>
+  <li><span class="t">Appendix</span> — <span class="d">metrics, commands, glossary</span></li>
+</ol>
+
+<!-- ══════════════════════════ 1 ══════════════════════════ -->
+<div class="sec">
+<h2><span class="n">1</span>Executive Summary</h2>
+
+<p><strong>NeuroTrace is Chrome DevTools for AI agents.</strong> It is a Python library that wraps
+an agent's execution loop, silently records a structured event for every decision the agent
+makes — each model call, each tool invocation, each error and retry, with timing and payloads —
+saves that recording to a local database, and renders it back as an inspectable timeline.</p>
+
+<p>The business case rests on a single observation: <strong>agent frameworks make it easy to build a
+loop and hard to see inside it.</strong> When an agent misbehaves in production — loops on a tool,
+invents an argument, silently swallows a failure — the standard remedy today is to add
+<code>print()</code> statements and run it again, hoping the non-deterministic failure reproduces.
+NeuroTrace captures the run <em>once</em>, in full, so diagnosis becomes reading rather than re-rolling
+the dice.</p>
+
+<div class="kpis">
+  <div class="kpi"><div class="v">~1,200</div><div class="l">Lines of library code</div></div>
+  <div class="kpi"><div class="v">55</div><div class="l">Tests, all passing</div></div>
+  <div class="kpi"><div class="v">1</div><div class="l">Line of code to adopt</div></div>
+  <div class="kpi"><div class="v">4+</div><div class="l">LLM providers supported</div></div>
+</div>
+
+<h3>What is complete</h3>
+<p>The capture path is finished end to end, and the data is now reachable by other software. The
+event schema, the tracer, both storage backends (in-memory and SQLite), the OpenAI-compatible adapter
+with security validation, the command-line interface, a terminal timeline renderer, and a read-only
+JSON API server all work and are covered by tests. An agent adopts NeuroTrace by changing one
+construction line; the loop itself is untouched.</p>
+
+<h3>What is not</h3>
+<p>The graphical HTML timeline viewer — arguably the most demo-able piece — is not built, though the
+API it will consume now exists. Streaming responses are not captured correctly. There is no redaction
+of sensitive data, and no async or threaded agent support. These are enumerated honestly in
+<strong>Section 9</strong>, because documentation that oversells a pre-release library is worse
+than none.</p>
+
+<div class="box">
+  <span class="lbl">The one-sentence pitch</span>
+  <p>Instrument an agent in one line, and get a complete, causally-ordered, replayable record of
+  everything it did — portable across OpenAI, xAI, Groq, and locally-hosted models, with no vendor
+  SDK dependency and no data leaving the machine.</p>
+</div>
+</div>
+
+<!-- ══════════════════════════ 2 ══════════════════════════ -->
+<div class="sec">
+<h2><span class="n">2</span>The Problem We Are Solving</h2>
+
+<h3>2.1 What an agent is, and why it is hard to watch</h3>
+<p>An <strong>AI agent</strong> is a program that pursues a goal autonomously. Given an instruction —
+"find the cheapest flight to Chicago" — it does not execute a fixed script. It asks a language
+model what to do next, calls a tool (a function, an API, a database query), feeds the result back
+to the model, and repeats. The loop runs until the model declares itself done.</p>
+
+<p>That loop is the product's value <em>and</em> its liability. The value: the agent handles
+situations nobody wrote code for. The liability: <strong>nobody wrote code for those situations, so
+nobody knows what it did.</strong> The developer sees an instruction go in and an answer come out.
+Everything between is invisible.</p>
+
+<h3>2.2 The four failure modes that cost real money</h3>
+<table>
+  <thead><tr><th style="width:24%">Failure</th><th style="width:38%">What it looks like</th><th>Business cost</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Silent loop</strong></td><td>The agent calls the same tool twenty times with slightly different arguments before giving up.</td><td>Direct token spend, multiplied. Latency the user experiences as a hang. Invisible until the invoice arrives.</td></tr>
+    <tr><td><strong>Hallucinated call</strong></td><td>The model asks for a tool that does not exist, or passes an argument the schema never offered.</td><td>A crash in production, or worse — a call that <em>succeeds</em> against a parameter you never intended to expose.</td></tr>
+    <tr><td><strong>Swallowed error</strong></td><td>A tool fails; the framework catches it, feeds a vague message back to the model, and the agent carries on to a wrong answer.</td><td>Wrong output delivered confidently. The most expensive class of failure, because nobody notices.</td></tr>
+    <tr><td><strong>Non-reproducible bug</strong></td><td>A user reports a bad run. Re-running the same prompt produces a different, working result.</td><td>Engineering hours burned on failures that cannot be reproduced on demand. The dominant cost in practice.</td></tr>
+  </tbody>
+</table>
+
+<h3>2.3 Why existing tooling does not close the gap</h3>
+<p>Three approaches exist today, and each falls short in a specific way:</p>
+<ul>
+  <li><strong>Raw logging (<code>print</code> / <code>logging</code>).</strong> Unstructured and
+  ordered by wall-clock, so causality — <em>this</em> model call requested <em>that</em> tool — is
+  lost. Reconstructing the loop from interleaved text is manual archaeology.</li>
+  <li><strong>Framework-native tracing.</strong> LangChain, LlamaIndex, and CrewAI each ship
+  something, all mutually incompatible, all absent if you wrote the loop yourself against a raw
+  SDK. Adopting one couples your observability to your framework choice.</li>
+  <li><strong>Hosted platforms (LangSmith, Langfuse, Braintrust).</strong> Capable, but they ship
+  prompts and tool payloads to a third party — a non-starter for regulated data — and introduce a
+  vendor dependency and a per-seat cost at exactly the stage where a team is still deciding whether
+  agents work at all.</li>
+</ul>
+
+<p>The gap NeuroTrace targets: <strong>a framework-agnostic, locally-hosted, zero-dependency way to
+capture an agent run as structured, causally-linked data.</strong></p>
+
+<div class="box">
+  <span class="lbl">Analogy that lands with non-technical stakeholders</span>
+  <p>Before browser DevTools, debugging a slow web page meant guessing which request was slow.
+  DevTools did not make pages faster — it made them <em>legible</em>, and the speed followed.
+  NeuroTrace is that intervention, applied to agent loops.</p>
+</div>
+</div>
+
+<!-- ══════════════════════════ 3 ══════════════════════════ -->
+<div class="sec pb">
+<h2><span class="n">3</span>The Product</h2>
+
+<h3>3.1 Definition</h3>
+<p>NeuroTrace is an <strong>observability layer for agent execution</strong>. It is conceptually
+adjacent to distributed tracing systems (Jaeger, Honeycomb) — the same span/parent model — but
+purpose-built for reasoning loops rather than microservice request chains. Where a distributed trace
+answers <em>"which service was slow?"</em>, a NeuroTrace answers <em>"why did the agent decide
+that?"</em></p>
+
+<h3>3.2 The adoption experience</h3>
+<p>The design constraint that shaped the entire product: <strong>instrumentation must not appear in
+the agent loop.</strong> A developer wraps the client and changes nothing else.</p>
+
+<pre><span class="c"># Before — an ordinary tool-calling loop</span>
+client = OpenAI()
+response = client.chat.completions.create(model=<span class="s">"gpt-4o"</span>, messages=messages)
+
+<span class="c"># After — one line changes; the loop below is byte-identical</span>
+<span class="k">with</span> Tracer(name=<span class="s">"my-agent"</span>, storage=SQLiteStorage(<span class="s">"traces.db"</span>)) <span class="k">as</span> tracer:
+    client = trace_openai(OpenAI(), tracer)
+    response = client.chat.completions.create(model=<span class="s">"gpt-4o"</span>, messages=messages)
+    messages += client.dispatch_tool_calls(response, {<span class="s">"get_weather"</span>: get_weather})</pre>
+
+<p>The verified consequence: <code>examples/openai_agent.py</code> contains a complete agent loop
+with <strong>zero NeuroTrace calls inside it</strong>. Only the construction line knows tracing
+exists. This matters commercially — the adoption cost is near zero, and so is the cost of removing
+it if the team decides against it. Nothing is locked in.</p>
+
+<h3>3.3 The output</h3>
+<p>After a run, the trace is inspected from the terminal. The tree structure is the point: each tool
+call sits <em>under</em> the model call that requested it, so causality is visible at a glance rather
+than inferred from timestamps.</p>
+
+<pre>$ neurotrace view traces.db
+Trace: weather-agent  (d4561a4d)  2026-07-19T18:56:11 -> 2026-07-19T18:56:11
+├─ llm_call  gpt-4o  412.7ms
+│  └─ tool_call  get_weather  1.2ms
+├─ llm_call  gpt-4o  380.1ms
+├─ llm_call  gpt-4o  291.5ms
+│  └─ tool_call  book_flight  0.1ms
+│     └─ error  [error: no tool named <span class="s">'book_flight'</span>]
+└─ llm_call  gpt-4o  244.8ms</pre>
+
+<p>Read that trace as a stakeholder: four model calls were billed, one tool succeeded, and the agent
+hallucinated a <code>book_flight</code> capability it was never given. That diagnosis took five
+seconds and no re-run.</p>
+
+<h3>3.4 Intended users</h3>
+<table>
+  <thead><tr><th style="width:26%">Audience</th><th>Job to be done</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Agent developers</strong></td><td>Diagnose a misbehaving loop without adding print statements and re-rolling a non-deterministic failure.</td></tr>
+    <tr><td><strong>Teams evaluating providers</strong></td><td>Run the identical loop against OpenAI, Groq, xAI, and a local model, and compare the traces on latency, token spend, and tool-calling reliability.</td></tr>
+    <tr><td><strong>Security &amp; compliance reviewers</strong></td><td>Audit exactly which tools an agent invoked with which arguments — a record that exists nowhere else by default.</td></tr>
+    <tr><td><strong>Regulated environments</strong></td><td>Get hosted-platform-grade tracing without prompts or tool payloads leaving the machine.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════ 4 ══════════════════════════ -->
+<div class="sec pb">
+<h2><span class="n">4</span>Architecture</h2>
+
+<h3>4.1 System layers</h3>
+<p>Four layers, deliberately built bottom-up: the schema everything speaks, the recorder, the
+translators for specific vendors, and the presentation surface.</p>
+
+<div class="fig">
+<svg viewBox="0 0 700 400" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 z" fill="#4a76c4"/>
+    </marker>
+  </defs>
+
+  <!-- user code -->
+  <rect x="20" y="14" width="660" height="52" rx="4" fill="#eef2f8" stroke="#b9c7dc"/>
+  <text x="36" y="34" font-size="12" font-weight="bold" fill="#10233f">YOUR AGENT LOOP</text>
+  <text x="36" y="52" font-size="10" fill="#4a5568">Unmodified application code — contains no NeuroTrace calls</text>
+  <rect x="470" y="24" width="192" height="32" rx="3" fill="#fff" stroke="#4a76c4" stroke-dasharray="3 2"/>
+  <text x="566" y="44" font-size="10" fill="#2b4f8c" text-anchor="middle">client.chat.completions.create()</text>
+
+  <line x1="350" y1="66" x2="350" y2="88" stroke="#4a76c4" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- adapter layer -->
+  <rect x="20" y="92" width="660" height="66" rx="4" fill="#f2f6fc" stroke="#4a76c4" stroke-width="1.4"/>
+  <text x="36" y="112" font-size="11.5" font-weight="bold" fill="#2b4f8c">ADAPTER LAYER &nbsp;·&nbsp; adapters/openai.py</text>
+  <text x="36" y="129" font-size="9.5" fill="#4a5568">Transparent proxy. Intercepts completions, reads response fields structurally,</text>
+  <text x="36" y="143" font-size="9.5" fill="#4a5568">validates model-chosen tool calls, delegates everything else to the real client.</text>
+  <rect x="484" y="104" width="180" height="44" rx="3" fill="#fff" stroke="#b9c7dc"/>
+  <text x="574" y="121" font-size="9" fill="#2b4f8c" text-anchor="middle">TracedOpenAI proxy</text>
+  <text x="574" y="137" font-size="8.5" fill="#6b7a8d" text-anchor="middle">wire-format, not vendor</text>
+
+  <line x1="350" y1="158" x2="350" y2="180" stroke="#4a76c4" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- core -->
+  <rect x="20" y="184" width="660" height="92" rx="4" fill="#0f1620"/>
+  <text x="36" y="205" font-size="11.5" font-weight="bold" fill="#6ea8fe">CORE &nbsp;·&nbsp; the recording equipment</text>
+  <rect x="36" y="216" width="196" height="46" rx="3" fill="#1c2836"/>
+  <text x="134" y="234" font-size="10" fill="#fff" text-anchor="middle" font-weight="bold">events.py</text>
+  <text x="134" y="250" font-size="8.5" fill="#9fb0c4" text-anchor="middle">Event · Trace · EventType</text>
+  <rect x="248" y="216" width="196" height="46" rx="3" fill="#1c2836"/>
+  <text x="346" y="234" font-size="10" fill="#fff" text-anchor="middle" font-weight="bold">tracer.py</text>
+  <text x="346" y="250" font-size="8.5" fill="#9fb0c4" text-anchor="middle">spans · timing · parentage</text>
+  <rect x="460" y="216" width="204" height="46" rx="3" fill="#1c2836"/>
+  <text x="562" y="234" font-size="10" fill="#fff" text-anchor="middle" font-weight="bold">storage.py</text>
+  <text x="562" y="250" font-size="8.5" fill="#9fb0c4" text-anchor="middle">InMemory · SQLite</text>
+
+  <line x1="350" y1="276" x2="350" y2="298" stroke="#4a76c4" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- presentation -->
+  <rect x="20" y="302" width="322" height="84" rx="4" fill="#f2f6fc" stroke="#4a76c4" stroke-width="1.4"/>
+  <text x="36" y="322" font-size="11.5" font-weight="bold" fill="#2b4f8c">PRESENTATION &nbsp;·&nbsp; viewer/ + cli.py</text>
+  <text x="36" y="339" font-size="9.5" fill="#4a5568">tree.py rebuilds the tree from flat</text>
+  <text x="36" y="353" font-size="9.5" fill="#4a5568">parent_id links; render.py draws it as</text>
+  <text x="36" y="367" font-size="9.5" fill="#4a5568">text; server.py serves it as JSON.</text>
+
+  <rect x="358" y="302" width="322" height="84" rx="4" fill="#fdf6ef" stroke="#d9a86c" stroke-dasharray="4 3"/>
+  <text x="374" y="322" font-size="11.5" font-weight="bold" fill="#a5601f">NOT YET BUILT &nbsp;·&nbsp; Day 6</text>
+  <text x="374" y="339" font-size="9.5" fill="#7a5a35">HTML/JS timeline UI, served as a static</text>
+  <text x="374" y="353" font-size="9.5" fill="#7a5a35">asset by the Day 5 app. The API and the</text>
+  <text x="374" y="367" font-size="9.5" fill="#7a5a35">tree-builder it consumes both exist.</text>
+</svg>
+<div class="cap">Figure 1 — System layers. Arrows indicate dependency direction: each layer knows only the one beneath it, so a second adapter (Anthropic, LangChain) plugs in without touching core, and the viewer works against any adapter's output.</div>
+</div>
+
+<h3>4.2 Data flow</h3>
+<p>The pipeline from a live agent to a readable timeline. Note the single persistence point — a
+design decision with a consequence documented in Section 9.</p>
+
+<div class="fig">
+<svg viewBox="0 0 700 210" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ar2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 z" fill="#4a76c4"/>
+    </marker>
+  </defs>
+  <g font-size="9.5">
+    <rect x="8" y="52" width="96" height="58" rx="4" fill="#eef2f8" stroke="#b9c7dc"/>
+    <text x="56" y="76" text-anchor="middle" font-weight="bold" fill="#10233f" font-size="10">Agent runs</text>
+    <text x="56" y="92" text-anchor="middle" fill="#5c6773" font-size="8.5">calls + tools</text>
+
+    <line x1="106" y1="81" x2="128" y2="81" stroke="#4a76c4" stroke-width="1.5" marker-end="url(#ar2)"/>
+
+    <rect x="132" y="52" width="104" height="58" rx="4" fill="#f2f6fc" stroke="#4a76c4"/>
+    <text x="184" y="72" text-anchor="middle" font-weight="bold" fill="#2b4f8c" font-size="10">Proxy</text>
+    <text x="184" y="87" text-anchor="middle" fill="#5c6773" font-size="8.5">intercepts &amp;</text>
+    <text x="184" y="99" text-anchor="middle" fill="#5c6773" font-size="8.5">validates</text>
+
+    <line x1="238" y1="81" x2="260" y2="81" stroke="#4a76c4" stroke-width="1.5" marker-end="url(#ar2)"/>
+
+    <rect x="264" y="52" width="104" height="58" rx="4" fill="#0f1620"/>
+    <text x="316" y="72" text-anchor="middle" font-weight="bold" fill="#fff" font-size="10">Tracer</text>
+    <text x="316" y="87" text-anchor="middle" fill="#9fb0c4" font-size="8.5">times span,</text>
+    <text x="316" y="99" text-anchor="middle" fill="#9fb0c4" font-size="8.5">emits Event</text>
+
+    <line x1="370" y1="81" x2="392" y2="81" stroke="#4a76c4" stroke-width="1.5" marker-end="url(#ar2)"/>
+
+    <rect x="396" y="52" width="104" height="58" rx="4" fill="#0f1620"/>
+    <text x="448" y="72" text-anchor="middle" font-weight="bold" fill="#fff" font-size="10">Trace</text>
+    <text x="448" y="87" text-anchor="middle" fill="#9fb0c4" font-size="8.5">ordered events</text>
+    <text x="448" y="99" text-anchor="middle" fill="#9fb0c4" font-size="8.5">held in memory</text>
+
+    <line x1="502" y1="81" x2="524" y2="81" stroke="#4a76c4" stroke-width="1.5" marker-end="url(#ar2)"/>
+
+    <rect x="528" y="52" width="100" height="58" rx="4" fill="#f2f6fc" stroke="#4a76c4"/>
+    <text x="578" y="72" text-anchor="middle" font-weight="bold" fill="#2b4f8c" font-size="10">SQLite</text>
+    <text x="578" y="87" text-anchor="middle" fill="#5c6773" font-size="8.5">traces.db</text>
+    <text x="578" y="99" text-anchor="middle" fill="#5c6773" font-size="8.5">upsert on exit</text>
+
+    <path d="M578 112 L578 140 L316 140 L316 156" fill="none" stroke="#4a76c4" stroke-width="1.5" marker-end="url(#ar2)"/>
+    <rect x="220" y="160" width="192" height="42" rx="4" fill="#eef2f8" stroke="#b9c7dc"/>
+    <text x="316" y="178" text-anchor="middle" font-weight="bold" fill="#10233f" font-size="10">neurotrace view</text>
+    <text x="316" y="193" text-anchor="middle" fill="#5c6773" font-size="8.5">rebuilds tree · renders timeline</text>
+  </g>
+  <g font-size="8" fill="#a5601f">
+    <text x="578" y="34" text-anchor="middle" font-weight="bold">⚠ single write point</text>
+    <text x="578" y="45" text-anchor="middle">persists on Tracer exit</text>
+  </g>
+</svg>
+<div class="cap">Figure 2 — Data flow. Events accumulate in memory during the run and are written once when the Tracer's context block exits. This keeps the hot path free of disk I/O, at the cost documented in Section 9.3.</div>
+</div>
+
+<h3>4.3 Sequence of one traced agent turn</h3>
+<p>This is the most important diagram in the document, because it shows the ordering problem the
+architecture had to solve. The model <em>requests</em> a tool inside a completion, but the tool only
+<em>runs</em> after that completion has returned and its span has already closed.</p>
+
+<div class="fig">
+<svg viewBox="0 0 700 340" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="7" refY="2.5" orient="auto">
+      <path d="M0,0 L7,2.5 L0,5 z" fill="#4a5568"/>
+    </marker>
+  </defs>
+  <g font-size="9">
+    <!-- lifelines -->
+    <rect x="16" y="8" width="104" height="26" rx="3" fill="#eef2f8" stroke="#b9c7dc"/>
+    <text x="68" y="25" text-anchor="middle" font-weight="bold" fill="#10233f">Agent loop</text>
+    <line x1="68" y1="34" x2="68" y2="324" stroke="#c4cdd8" stroke-dasharray="3 3"/>
+
+    <rect x="152" y="8" width="104" height="26" rx="3" fill="#f2f6fc" stroke="#4a76c4"/>
+    <text x="204" y="25" text-anchor="middle" font-weight="bold" fill="#2b4f8c">Proxy</text>
+    <line x1="204" y1="34" x2="204" y2="324" stroke="#c4cdd8" stroke-dasharray="3 3"/>
+
+    <rect x="288" y="8" width="104" height="26" rx="3" fill="#0f1620"/>
+    <text x="340" y="25" text-anchor="middle" font-weight="bold" fill="#fff">Tracer</text>
+    <line x1="340" y1="34" x2="340" y2="324" stroke="#c4cdd8" stroke-dasharray="3 3"/>
+
+    <rect x="424" y="8" width="104" height="26" rx="3" fill="#eef2f8" stroke="#b9c7dc"/>
+    <text x="476" y="25" text-anchor="middle" font-weight="bold" fill="#10233f">LLM provider</text>
+    <line x1="476" y1="34" x2="476" y2="324" stroke="#c4cdd8" stroke-dasharray="3 3"/>
+
+    <rect x="560" y="8" width="124" height="26" rx="3" fill="#eef2f8" stroke="#b9c7dc"/>
+    <text x="622" y="25" text-anchor="middle" font-weight="bold" fill="#10233f">Your tool fn</text>
+    <line x1="622" y1="34" x2="622" y2="324" stroke="#c4cdd8" stroke-dasharray="3 3"/>
+
+    <!-- messages -->
+    <line x1="68" y1="54" x2="200" y2="54" stroke="#4a5568" marker-end="url(#ar3)"/>
+    <text x="72" y="49" fill="#33404f">1. create(messages, tools=…)</text>
+
+    <line x1="204" y1="78" x2="336" y2="78" stroke="#4a5568" marker-end="url(#ar3)"/>
+    <text x="208" y="73" fill="#33404f">2. open llm_call span (timer starts)</text>
+
+    <line x1="204" y1="102" x2="472" y2="102" stroke="#4a5568" marker-end="url(#ar3)"/>
+    <text x="208" y="97" fill="#33404f">3. real HTTP request</text>
+
+    <line x1="476" y1="126" x2="208" y2="126" stroke="#4a5568" stroke-dasharray="4 2" marker-end="url(#ar3)"/>
+    <text x="216" y="121" fill="#33404f">4. response: "call get_weather(city=Lisbon)"</text>
+
+    <line x1="204" y1="150" x2="336" y2="150" stroke="#4a5568" marker-end="url(#ar3)"/>
+    <text x="208" y="145" fill="#33404f">5. record tokens, close span → event_id saved</text>
+
+    <line x1="200" y1="174" x2="72" y2="174" stroke="#4a5568" stroke-dasharray="4 2" marker-end="url(#ar3)"/>
+    <text x="76" y="169" fill="#33404f">6. response returned unchanged</text>
+
+    <rect x="60" y="184" width="628" height="1" fill="#dde3ea"/>
+    <text x="68" y="197" fill="#a5601f" font-weight="bold" font-size="8.5">— llm_call span has already CLOSED here; the tool has not run yet —</text>
+
+    <line x1="68" y1="218" x2="200" y2="218" stroke="#4a5568" marker-end="url(#ar3)"/>
+    <text x="72" y="213" fill="#33404f">7. dispatch_tool_calls(response, tools)</text>
+
+    <line x1="204" y1="242" x2="336" y2="242" stroke="#b8404a" marker-end="url(#ar3)"/>
+    <text x="208" y="237" fill="#a2333c" font-weight="bold">8. under(last_llm_event_id) → re-parent</text>
+
+    <line x1="204" y1="266" x2="336" y2="266" stroke="#4a5568" marker-end="url(#ar3)"/>
+    <text x="208" y="261" fill="#33404f">9. validate args vs. schema + signature</text>
+
+    <line x1="204" y1="290" x2="618" y2="290" stroke="#4a5568" marker-end="url(#ar3)"/>
+    <text x="208" y="285" fill="#33404f">10. execute (only if validation passed)</text>
+
+    <line x1="200" y1="314" x2="72" y2="314" stroke="#4a5568" stroke-dasharray="4 2" marker-end="url(#ar3)"/>
+    <text x="76" y="309" fill="#33404f">11. role="tool" messages → appended to conversation</text>
+  </g>
+</svg>
+<div class="cap">Figure 3 — One traced turn. Step 8 is the architectural crux: <code>Tracer.under()</code> re-parents the tool span under a completion span that has already closed, preserving the causal link the timeline depends on.</div>
+</div>
+
+<h3>4.4 Flat storage, tree presentation</h3>
+<p>Events are stored as a flat list with a <code>parent_id</code> pointer. The tree is rebuilt at
+read time, not enforced at write time. This is why the event list's <em>order</em> differs from the
+timeline's <em>shape</em> — spans append when they close, so a parent appears in the list before its
+children even though it renders above them.</p>
+
+<div class="fig">
+<svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <g font-size="9">
+    <text x="16" y="18" font-weight="bold" fill="#10233f" font-size="10.5">STORED (flat, ordered by span close)</text>
+    <rect x="16" y="28" width="300" height="26" rx="3" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="26" y="45" fill="#33404f">llm_call &nbsp;<tspan fill="#8a94a2">id=A · parent=null</tspan></text>
+    <rect x="16" y="58" width="300" height="26" rx="3" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="26" y="75" fill="#33404f">tool_call &nbsp;<tspan fill="#8a94a2">id=B · parent=A</tspan></text>
+    <rect x="16" y="88" width="300" height="26" rx="3" fill="#f6f8fa" stroke="#dde3ea"/>
+    <text x="26" y="105" fill="#33404f">llm_call &nbsp;<tspan fill="#8a94a2">id=C · parent=null</tspan></text>
+    <rect x="16" y="118" width="300" height="26" rx="3" fill="#fdf1f2" stroke="#e8bcc0"/>
+    <text x="26" y="135" fill="#33404f">tool_call &nbsp;<tspan fill="#8a94a2">id=D · parent=C</tspan> <tspan fill="#a2333c">· errored</tspan></text>
+    <rect x="16" y="148" width="300" height="26" rx="3" fill="#fdf1f2" stroke="#e8bcc0"/>
+    <text x="26" y="165" fill="#33404f">error &nbsp;<tspan fill="#8a94a2">id=E · parent=D</tspan></text>
+
+    <path d="M330 100 L372 100" stroke="#4a76c4" stroke-width="1.6"/>
+    <path d="M366 95 L376 100 L366 105 z" fill="#4a76c4"/>
+    <text x="352" y="90" text-anchor="middle" font-size="8" fill="#4a76c4" font-weight="bold">_build_children</text>
+    <text x="352" y="116" text-anchor="middle" font-size="8" fill="#8a94a2">at read time</text>
+
+    <text x="392" y="18" font-weight="bold" fill="#10233f" font-size="10.5">RENDERED (tree, ordered by causality)</text>
+    <rect x="392" y="28" width="292" height="146" rx="3" fill="#0f1620"/>
+    <g font-family="Menlo, monospace" font-size="9" fill="#dfe6ef">
+      <text x="404" y="48">├─ llm_call  gpt-4o  412.7ms</text>
+      <text x="404" y="68">│  └─ tool_call  get_weather  1.2ms</text>
+      <text x="404" y="88">└─ llm_call  gpt-4o  291.5ms</text>
+      <text x="404" y="108" fill="#f0a5ac">   └─ tool_call  book_flight  0.1ms</text>
+      <text x="404" y="128" fill="#f0a5ac">      └─ error  [no tool named…]</text>
+      <text x="404" y="156" fill="#7f92a8" font-size="8">causality restored from parent_id</text>
+    </g>
+  </g>
+</svg>
+<div class="cap">Figure 4 — Flat capture, tree presentation. Deferring tree construction to read time means capture never has to know the final shape, and any future viewer reuses the same <code>_build_children</code> logic rather than re-deriving it.</div>
+</div>
+
+<h3>4.5 Data model</h3>
+<p>Two tables. A <code>Trace</code> is one agent run; an <code>Event</code> is one thing that
+happened inside it. The <code>payload</code> column is JSON, which is what makes the schema
+adapter-agnostic.</p>
+
+<table>
+  <thead><tr><th style="width:18%">Table</th><th style="width:30%">Columns</th><th>Purpose &amp; notes</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>traces</code></td>
+      <td><code>trace_id</code> (PK), <code>name</code>, <code>started_at</code>, <code>ended_at</code>, <code>metadata_json</code></td>
+      <td>One row per agent run. <code>ended_at</code> null means the run is still in progress or crashed. <code>metadata_json</code> carries free-form run context — the example stores which provider was used, enabling cross-provider comparison.</td>
+    </tr>
+    <tr>
+      <td><code>events</code></td>
+      <td><code>event_id</code> (PK), <code>trace_id</code> (FK), <code>event_type</code>, <code>payload_json</code>, <code>timestamp</code>, <code>duration_ms</code>, <code>parent_id</code>, <code>error</code></td>
+      <td>One row per recorded decision, indexed on <code>trace_id</code>. <code>parent_id</code> is a self-reference that encodes causality. Both tables use upsert, so re-saving an in-progress trace updates rows rather than duplicating them.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>Event types</h4>
+<table>
+  <thead><tr><th style="width:16%">Type</th><th style="width:38%">Payload</th><th>Emitted by</th></tr></thead>
+  <tbody>
+    <tr><td><code>llm_call</code></td><td><code>model</code>, <code>prompt</code>, <code>response</code>, <code>prompt_tokens</code>, <code>completion_tokens</code></td><td>Adapter, automatically on every completion</td></tr>
+    <tr><td><code>tool_call</code></td><td><code>tool_name</code>, <code>args</code>, <code>result</code></td><td>Adapter, automatically on every dispatched tool</td></tr>
+    <tr><td><code>error</code></td><td>message in the <code>error</code> column</td><td>Adapter on a rejected tool call; also manually via <code>tracer.error()</code></td></tr>
+    <tr><td><code>retry</code></td><td><code>attempt</code>, <code>reason</code></td><td>Manual only — <span class="pill p-part">no automatic emitter yet</span></td></tr>
+    <tr><td><code>decision</code></td><td>—</td><td>Declared in the schema, <span class="pill p-no">never emitted</span> — reserved for future reasoning-step capture</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════ 5 ══════════════════════════ -->
+<div class="sec pb">
+<h2><span class="n">5</span>Component Walkthrough</h2>
+
+<p>Every file in the library, what it does, and why it earns its place.</p>
+
+<h3><code>core/events.py</code> — the vocabulary <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(171 lines)</span></h3>
+<p>Defines <code>Event</code>, <code>Trace</code>, <code>EventType</code>, and four constructor
+functions. This was the first thing built, and deliberately so: every other component — recorder,
+storage, adapters, viewer — has to agree on what an "event" is, so the schema is the contract that
+makes parallel development possible.</p>
+<p><strong>Business value:</strong> a stable schema is what allows a second adapter (Anthropic,
+LangChain) or a second consumer (a dashboard, an export to OpenTelemetry) to be added later without
+renegotiating the data format. It is the asset with the longest half-life in the codebase.</p>
+
+<h3><code>core/tracer.py</code> — the recorder <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(167 lines)</span></h3>
+<p>A context manager owning one <code>Trace</code> per run, with nested <code>llm_call</code> and
+<code>tool_call</code> spans that time themselves and infer parentage from a stack. Two details
+matter disproportionately:</p>
+<ul>
+  <li><strong>Pre-generated event IDs.</strong> A span's ID is created on <em>entry</em>, before the
+  event object exists, so children can reference a parent that has not finished yet.</li>
+  <li><strong><code>__exit__</code> always persists</strong> — including when the agent raised. A
+  crashed run still leaves a partial trace, which is precisely the run you most want to inspect.</li>
+</ul>
+
+<h3><code>core/storage.py</code> — persistence <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(165 lines)</span></h3>
+<p>One abstract interface, two implementations: <code>InMemoryStorage</code> for fast tests,
+<code>SQLiteStorage</code> for real runs. SQLite was chosen because it is in the Python standard
+library — a trace file is a single portable artifact with no server to run, no container to start,
+and no credentials to manage.</p>
+<p><strong>Business value:</strong> zero operational cost to adopt. A developer can attach a trace
+file to a ticket the way they would attach a log.</p>
+
+<h3><code>adapters/openai.py</code> — the instrumentation <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(301 lines)</span></h3>
+<p>The largest and most commercially significant module. It is a transparent proxy: instrumented
+methods are traced, everything else is delegated via <code>__getattr__</code>. Three properties
+distinguish it:</p>
+<ul>
+  <li><strong>The <code>openai</code> package is never imported.</strong> Response fields are read
+  structurally through a helper that handles both dictionaries and attribute objects. The
+  consequence is Section 6.3.</li>
+  <li><strong>Tool calls are validated before execution</strong> — the security boundary described
+  in Section 6.4.</li>
+  <li><strong>Model mistakes and code failures are separated.</strong> A hallucinated tool becomes a
+  recorded error fed back to the model so the loop recovers; a tool that genuinely raises propagates
+  unmodified so real bugs are not buried in a trace entry.</li>
+</ul>
+
+<h3><code>viewer/tree.py</code> — the shared tree builder <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(52 lines)</span></h3>
+<p>Turns the flat, <code>parent_id</code>-linked event list back into a nested structure. Day 3
+deliberately kept this logic out of the CLI on the grounds that a real UI would need it; Day 5's API
+server became that second consumer, so it moved here and both callers share one implementation rather
+than two that drift. It also re-attaches orphaned events as roots — an event pointing at a parent not
+present in the trace was previously dropped from the timeline entirely.</p>
+
+<h3><code>viewer/render.py</code> — the terminal timeline <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(66 lines)</span></h3>
+<p>Presentation only, since the tree logic moved out. Returns a string rather than printing, so the
+CLI prints it, the API serves it, and tests assert on it directly.</p>
+
+<h3><code>viewer/server.py</code> — the JSON API <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(103 lines)</span></h3>
+<p>A read-only FastAPI application over one trace database, exposing four endpoints: trace summaries,
+one trace flat as stored, one trace nested as a timeline draws it, and one trace as rendered text.
+Three decisions carry weight:</p>
+<ul>
+  <li><strong>A connection per request.</strong> FastAPI runs synchronous endpoints in a worker
+  threadpool, and SQLite rejects a connection used off its creating thread — so the tracer's
+  single-connection design would fail intermittently here. This was verified as a real failure before
+  being designed around, and the test issues repeated requests because a single one passes either way.</li>
+  <li><strong>Read-only and loopback-bound by default.</strong> There are no write endpoints, and the
+  server binds to <code>127.0.0.1</code> rather than all interfaces, because traces hold prompts and
+  tool arguments verbatim. Exposing them on a network is an explicit operator decision.</li>
+  <li><strong>A missing database is an error, not an empty result.</strong> Since connecting creates a
+  schema, a typo'd path would otherwise serve a brand-new empty database and report zero traces —
+  making a wrong path indistinguishable from an unused one.</li>
+</ul>
+
+<h3><code>cli.py</code> — the interface <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(81 lines)</span></h3>
+<p>Two subcommands, <code>list</code> and <code>view</code>. <code>view</code> defaults to the most
+recently started trace, because the common need immediately after a run is "show me what just
+happened," not "let me look up an ID first." User errors (bad ID, empty database) exit with status 1
+and a message on stderr rather than a traceback — they are expected conditions, not bugs.</p>
+
+<h3><code>examples/openai_agent.py</code> — the proof <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(205 lines)</span></h3>
+<p>A complete tool-calling agent that runs <strong>offline against a scripted client with no API
+key</strong>, and switches to any of four real providers with a flag. The scripted conversation
+deliberately includes a hallucinated <code>book_flight</code> call, so the error path is visible in
+the very first trace a new user generates.</p>
+<p><strong>Business value:</strong> evaluation friction is near zero. A prospective user sees a real
+trace within a minute of cloning, without a credit card.</p>
+
+<h3><code>tests/</code> — the safety net <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(39 tests, 630 lines)</span></h3>
+<p>Tests outnumber the modules they cover, with the adapter carrying the most (14) — appropriate,
+since it holds the security-sensitive logic. They run against hand-written fakes with no SDK
+installed, which is both faster and more honest: mocking the vendor SDK's types would only assert
+against our own assumptions about them.</p>
+</div>
+
+<!-- ══════════════════════════ 6 ══════════════════════════ -->
+<div class="sec pb">
+<h2><span class="n">6</span>Key Engineering Decisions</h2>
+
+<p>Five decisions shaped the product. Each is presented as the trade-off it actually was.</p>
+
+<h3>6.1 A flat event schema, not a class hierarchy</h3>
+<p><strong>Decision:</strong> one <code>Event</code> type with a free-form <code>payload</code> dict,
+rather than <code>LLMCallEvent</code>, <code>ToolCallEvent</code>, and so on.</p>
+<p><strong>Why:</strong> the schema must survive two pressures a class hierarchy fights — round-trip
+serialization to SQLite and JSON, and adapters that describe the same concept differently
+(LangChain's callback payloads look nothing like raw OpenAI function-calling payloads). A flat schema
+means one table and one serializer.</p>
+<p><strong>Cost, stated plainly:</strong> weaker type safety. An LLM event and a tool event are both
+just "an Event with a dict." Constructor functions recover some of that at the call site without
+subclasses.</p>
+
+<h3>6.2 A proxy, not a monkeypatch</h3>
+<p><strong>Decision:</strong> <code>trace_openai(client, tracer)</code> returns a wrapper, rather
+than globally patching the SDK's method.</p>
+<p><strong>Trade-off:</strong> a proxy cannot trace a client constructed somewhere you cannot reach.
+In exchange it is explicit about what is traced, nests correctly when two tracers are alive
+simultaneously, and does not break when the vendor reorganizes SDK internals — a real maintenance
+liability for any monkeypatching library.</p>
+
+<h3>6.3 Target the wire format, not the vendor</h3>
+<p><strong>Decision:</strong> never import <code>openai</code>; read response fields structurally.</p>
+<p>Initially a testing convenience, this turned out to be the project's most valuable decision.
+When cost pressure prompted a move off OpenAI, the migration required <strong>zero adapter
+changes</strong> — xAI, Groq, and Ollama all expose OpenAI-compatible endpoints, so swapping a
+<code>base_url</code> was the entire effort. Tracing, token capture, tool dispatch, and schema
+validation were verified unmodified against all three.</p>
+
+<table>
+  <thead><tr><th style="width:18%">Provider</th><th style="width:38%">Base URL</th><th style="width:16%">Cost</th><th>Strategic role</th></tr></thead>
+  <tbody>
+    <tr><td>OpenAI</td><td><code>api.openai.com/v1</code></td><td>Paid</td><td>Reference implementation</td></tr>
+    <tr><td>xAI (Grok)</td><td><code>api.x.ai/v1</code></td><td>Paid</td><td>Alternative frontier model</td></tr>
+    <tr><td>Groq</td><td><code>api.groq.com/openai/v1</code></td><td>Free tier</td><td>Zero-cost development and CI</td></tr>
+    <tr><td>Ollama</td><td><code>localhost:11434/v1</code></td><td>Free, local</td><td>Fully offline — nothing leaves the machine</td></tr>
+  </tbody>
+</table>
+
+<div class="box">
+  <span class="lbl">Commercial reading</span>
+  <p>Provider portability converts a vendor lock-in risk into a procurement lever. The same agent
+  code, and the same trace format, run against a frontier model in production and a free local model
+  in development — and the traces are directly comparable, which makes "is the cheaper model good
+  enough?" an empirical question rather than an argument.</p>
+</div>
+
+<h3>6.4 The tool schema is a security boundary</h3>
+<p>This decision came out of a pre-publication review and closed a genuine vulnerability class.
+Dispatching a tool means calling a Python function with arguments <em>the model chose</em>. Two
+problems followed from splatting that JSON straight into a callable:</p>
+
+<div class="box risk">
+  <span class="lbl">The vulnerability</span>
+  <p>A Python function may have parameters its published schema never offered the model:</p>
+  <pre style="margin:2mm 0 2mm">def read_file(path, allow_absolute=<span class="k">False</span>):  <span class="c"># schema declares only `path`</span></pre>
+  <p>Without a check, a prompt-injected tool call setting <code>allow_absolute=True</code> reaches
+  that parameter and defeats a control the developer believed was private. The schema shown to the
+  model is the contract; anything outside it must be unreachable.</p>
+</div>
+
+<p><strong>The fix:</strong> arguments are restricted to the properties the schema declares, and then
+checked against the function's actual signature. Both come free — the schemas were already passed to
+<code>create(tools=…)</code>, so the proxy records them and applies them automatically.</p>
+<p><strong>A deliberate non-behaviour:</strong> an unknown schema means <em>skip the check</em>, not
+<em>deny everything</em>. Denying would break every caller who never passed one. And the check bounds
+argument <em>names</em>, not <em>values</em> — validating that a path stays inside an allowed
+directory remains the tool's own job. Overstating this control would be worse than not having it.</p>
+
+<h3>6.5 Model errors versus code errors</h3>
+<p>A consistent rule, applied at two levels:</p>
+<table>
+  <thead><tr><th style="width:34%">Situation</th><th style="width:22%">Handling</th><th>Reasoning</th></tr></thead>
+  <tbody>
+    <tr><td>Model names a tool that does not exist</td><td>Errored span, fed back to the model</td><td rowspan="3">This is agent behaviour NeuroTrace exists to reveal. It belongs in the trace, not in a traceback — and the loop can recover from it.</td></tr>
+    <tr><td>Model passes an argument the schema never offered</td><td>Errored span, fed back</td></tr>
+    <tr><td>Model misspells or omits a required argument</td><td>Errored span, fed back</td></tr>
+    <tr><td>Tool raises while executing</td><td>Propagates unmodified</td><td>This is ordinary application code failing. Swallowing it would hide a real bug behind a trace entry.</td></tr>
+    <tr><td>Tool arguments are malformed JSON</td><td>Kept verbatim under <code>_raw</code></td><td>Unparseable arguments are the symptom; a decode error would destroy the evidence.</td></tr>
+  </tbody>
+</table>
+<p>The split is now cleanly <em>"wrong call"</em> (recorded, recoverable) versus <em>"broken
+tool"</em> (raised). Before the Day 4a review, that line was drawn accidentally at whichever
+statement happened to throw first.</p>
+</div>
+
+<!-- ══════════════════════════ 7 ══════════════════════════ -->
+<div class="sec pb">
+<h2><span class="n">7</span>Capabilities</h2>
+
+<p>Verified against the current codebase and a passing test run.</p>
+
+<table>
+  <thead><tr><th style="width:30%">Capability</th><th style="width:13%">Status</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td>Automatic LLM call capture</td><td><span class="pill p-ok">Working</span></td><td>Model, flattened prompt, response text, prompt/completion tokens, wall-clock duration.</td></tr>
+    <tr><td>Automatic tool call capture</td><td><span class="pill p-ok">Working</span></td><td>Tool name, parsed arguments, return value, duration, error state.</td></tr>
+    <tr><td>Causal nesting</td><td><span class="pill p-ok">Working</span></td><td>Tools nest under the completion that requested them, across the span-closure boundary.</td></tr>
+    <tr><td>Tool-call validation</td><td><span class="pill p-ok">Working</span></td><td>Schema-declared parameters plus signature binding, applied before any invocation.</td></tr>
+    <tr><td>Crash-resilient persistence</td><td><span class="pill p-ok">Working</span></td><td>Partial traces are saved even when the agent raises.</td></tr>
+    <tr><td>Provider portability</td><td><span class="pill p-ok">Working</span></td><td>OpenAI, xAI, Groq, Ollama, and any OpenAI-compatible endpoint. Verified on all four.</td></tr>
+    <tr><td>Zero-dependency instrumentation</td><td><span class="pill p-ok">Working</span></td><td>No vendor SDK required; works against dicts, pydantic models, and recorded fixtures.</td></tr>
+    <tr><td>Terminal timeline + CLI</td><td><span class="pill p-ok">Working</span></td><td><code>neurotrace list</code>, <code>view</code>, and <code>serve</code>, with sensible defaults.</td></tr>
+    <tr><td>Read-only JSON API</td><td><span class="pill p-ok">Working</span></td><td>Four endpoints over one trace database: summaries, flat trace, nested tree, rendered text. Loopback-bound by default.</td></tr>
+    <tr><td>Offline example agent</td><td><span class="pill p-ok">Working</span></td><td>Runs with no API key and produces a deterministic trace including an error path.</td></tr>
+    <tr><td>Retry capture</td><td><span class="pill p-part">Manual</span></td><td>The API exists; no adapter emits it automatically, so SDK-internal retries are invisible.</td></tr>
+    <tr><td>HTML/JS timeline viewer</td><td><span class="pill p-no">Not built</span></td><td>Planned Day 6. The API it consumes and the tree-builder it needs both exist now.</td></tr>
+    <tr><td>Streaming responses</td><td><span class="pill p-no">Not built</span></td><td>See Section 9.1 — currently records incorrect data rather than failing loudly.</td></tr>
+    <tr><td>Redaction / PII handling</td><td><span class="pill p-no">Not built</span></td><td>See Section 9.2. The most significant gap for production adoption.</td></tr>
+    <tr><td>Async and concurrency</td><td><span class="pill p-no">Not built</span></td><td>See Section 9.4.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════ 8 ══════════════════════════ -->
+<div class="sec">
+<h2><span class="n">8</span>Competitive Advantages</h2>
+
+<h3>8.1 Near-zero adoption and exit cost</h3>
+<p>One construction line changes. The agent loop is untouched, which means the decision to adopt is
+cheap and — equally important to a cautious buyer — the decision to <em>remove</em> it is cheap too.
+There is no framework to migrate onto and no proprietary format to escape.</p>
+
+<h3>8.2 Data never leaves the machine</h3>
+<p>Traces are a local SQLite file. For teams handling regulated, confidential, or personal data, this
+is not a feature preference — it is the difference between usable and prohibited. Hosted competitors
+require shipping prompts and tool payloads to a third party.</p>
+
+<h3>8.3 Vendor-independent by construction</h3>
+<p>Because the adapter targets the wire format rather than a vendor SDK, provider migration costs a
+<code>base_url</code>. Traces from different providers share one format and are directly comparable
+— which turns model selection into a measurement rather than a debate.</p>
+
+<h3>8.4 Security posture as a differentiator</h3>
+<p>Most agent frameworks call <code>fn(**model_chosen_args)</code> without validation. NeuroTrace
+treats the published tool schema as an enforced boundary, and it does so by default because the
+schemas were already in the request. For a security reviewer, the trace also functions as an audit
+log: every tool invocation with every argument, including the ones that were rejected.</p>
+
+<h3>8.5 Extensibility already paid for</h3>
+<p>The flat schema, the adapter interface, and the read-time tree construction were designed for a
+second adapter and a second consumer before either existed. Adding Anthropic support is a sibling
+module, not a rewrite; adding a graphical viewer reuses the existing tree-builder.</p>
+
+<h3>8.6 A visible standard of engineering judgement</h3>
+<p><code>docs/architecture.md</code> records not only what was decided but what was considered and
+rejected, and why. Two examples: a run-level error event was rejected because it double-counts what
+the span already recorded; renaming the module to <code>openai_compatible.py</code> was rejected
+because the accuracy gain does not justify a breaking import change. For a project intended to be
+public, this reasoning is itself a credential.</p>
+</div>
+
+<!-- ══════════════════════════ 9 ══════════════════════════ -->
+<div class="sec pb">
+<h2><span class="n">9</span>Limitations &amp; Risks</h2>
+
+<div class="box warn">
+  <span class="lbl">Read this section first if you are evaluating adoption</span>
+  <p>NeuroTrace is a pre-release library at Day 4 of a 7-day plan. The capture path is solid; several
+  properties expected of production observability infrastructure are absent. They are listed here in
+  descending order of consequence, not descending order of comfort.</p>
+</div>
+
+<h3>9.1 Streaming responses record wrong data — silently</h3>
+<p>Calling <code>create(stream=True)</code> returns an iterator rather than a completed response. The
+adapter records an empty response body and a duration that measures only time-to-first-chunk. It does
+not error; it produces a trace that <em>looks</em> valid and is not.</p>
+<p><strong>Severity: high</strong>, because silent wrongness is worse than failure, and streaming is
+the default in most user-facing agents. <strong>Fix:</strong> wrap the iterator to accumulate deltas
+and close the span at the end — scheduled, and scoped as its own day of work.</p>
+
+<h3>9.2 Traces are unencrypted plaintext of everything the agent said</h3>
+<p>Prompts, responses, tool arguments, and tool results are written to SQLite verbatim. That is
+precisely what makes a trace useful — and it means a trace of a run whose system prompt embeds an API
+key, or whose tool arguments carry personal data, is now a plaintext copy of that secret on disk.</p>
+<p><strong>There is no redaction hook.</strong> Until there is, the operational controls are: keep
+<code>.db</code> files out of version control (already in <code>.gitignore</code>); treat a trace file
+as being as sensitive as the conversation it recorded, and read it before attaching it to a bug
+report; and place trace files where file permissions are appropriate when tracing production runs.</p>
+<p><strong>Severity: high</strong> for any regulated deployment. This is the single largest blocker
+between the current state and production use.</p>
+
+<h3>9.3 Persistence happens once, at the end of the run</h3>
+<p>Events accumulate in memory and are written when the <code>Tracer</code> block exits. Two
+consequences: a process killed hard (<code>SIGKILL</code>, OOM, power loss) loses the entire trace,
+including the crash you wanted to inspect; and a long-running agent holds every prompt and response
+in memory for its full duration. A run of thousands of steps with large payloads has an unbounded
+memory footprint.</p>
+<p><strong>Severity: medium.</strong> Incremental flushing is a natural extension — the storage layer
+already upserts, so re-saving an in-progress trace updates rather than duplicates.</p>
+
+<h3>9.4 Synchronous and single-threaded only</h3>
+<p>Three related gaps, one of which was closed on the server side in Day 5:</p>
+<ul>
+  <li><strong>No async.</strong> The proxy wraps a synchronous <code>create()</code>. An
+  <code>AsyncOpenAI</code> client returns a coroutine the proxy neither awaits nor recognises — much
+  production agent code is async.</li>
+  <li><strong>Capture is not thread-safe.</strong> The parent-tracking stack is an ordinary list with
+  no thread-local isolation. Two agent threads sharing a tracer will interleave their stacks and
+  produce a corrupted parent tree. <em>Unchanged.</em></li>
+  <li><strong>Connection not shareable</strong> — <span class="pill p-part">addressed for reads</span>
+  The SQLite connection is created once in the constructor and Python's driver rejects cross-thread
+  use. This was confirmed as a live failure and designed around in the API server, which opens a
+  connection per request. The underlying <code>SQLiteStorage</code> object is still single-thread,
+  so the constraint remains for any other concurrent consumer.</li>
+</ul>
+<p><strong>Severity: medium-high</strong> — capture still bounds the addressable use cases to
+single-threaded synchronous agents, which is a real fraction of the market but not the majority of
+production deployments.</p>
+
+<h3>9.5 The flagship viewer does not exist</h3>
+<p>The product is described, in its own README, as "Chrome DevTools for agent runs." The terminal
+renderer delivers the structure but not the interaction — no expanding a step to read the full
+prompt, no filtering, no comparison. Section 3.3's tree is currently the entire visual product.</p>
+<p>Day 5 removed the dependency rather than the gap: the JSON API the UI will consume now exists and
+serves a pre-nested tree, so Day 6 is a rendering exercise rather than a rendering <em>and</em>
+data-plumbing exercise.</p>
+<p><strong>Severity: medium</strong> for utility, <strong>high</strong> for adoption and demo value.
+This remains the largest gap between the stated positioning and the shipped artefact.</p>
+
+<h3>9.6 Prompt capture is lossy by design</h3>
+<p>The messages list is flattened into a single string for the event payload. This is adequate for
+reading a timeline and <strong>insufficient for replaying a request</strong> — the structure needed
+to reconstruct and re-run the exact call is discarded. If replay or regression-testing from traces
+becomes a goal, the payload format must change.</p>
+
+<h3>9.7 Coverage gaps in what is considered an "event"</h3>
+<ul>
+  <li>The <code>decision</code> event type is declared in the schema but never emitted anywhere. The
+  reasoning-step capture the project's own framing promises is not implemented.</li>
+  <li><code>retry</code> events must be recorded manually. Retries performed inside the vendor SDK
+  are invisible, so a trace can understate both latency and token spend.</li>
+  <li>Errors raised <em>between</em> spans — in the agent's own orchestration code — are not
+  recorded as events. The trace still saves, but with an unexplained gap.</li>
+</ul>
+
+<h3>9.8 Scale and performance are uncharacterised</h3>
+<ul>
+  <li><span class="pill p-part">Improved</span> Summary listing no longer loads every event of every
+  trace. <code>list_trace_summaries()</code> is a single aggregate query with counts, used by both the
+  CLI and the API's list endpoint. <code>list_traces()</code> retains the full-load behaviour, and the
+  CLI's default "most recent trace" path still uses it to select a single row.</li>
+  <li>Tracing overhead has never been measured. It is expected to be small relative to network
+  latency, but "expected" is not "measured," and no benchmark exists.</li>
+  <li>There is no sampling, retention policy, or size cap. A trace database grows without bound.</li>
+</ul>
+
+<h3>9.9 Ecosystem and interoperability</h3>
+<ul>
+  <li><strong>One protocol supported.</strong> Only the OpenAI wire format. Anthropic's distinct
+  token fields and content-block shape need a sibling adapter. LangChain, LlamaIndex, and CrewAI —
+  named in the project's own framing — have no adapter at all, so the "framework-agnostic" claim is
+  currently architectural rather than demonstrated.</li>
+  <li><strong>No OpenTelemetry export.</strong> Traces cannot flow into existing observability
+  infrastructure, which for many organisations is a hard requirement rather than a nice-to-have.</li>
+  <li><strong>Single-user, local-only.</strong> No server, no authentication, no sharing model. A
+  trace is shared by sending someone a file.</li>
+  <li><strong>Tests use hand-written fakes.</strong> A defensible choice, and it does mean no test
+  exercises a real vendor SDK object. A silent upstream response-shape change would not be caught by
+  CI.</li>
+</ul>
+
+<h3>9.10 Strategic risk</h3>
+<p>The clearest commercial risk is not technical. Agent observability is an actively contested
+category with funded entrants (LangSmith, Langfuse, Braintrust, Arize) and vendor-native tooling
+improving steadily. NeuroTrace's defensible positions are local-first data custody and true framework
+independence — both real, and both requiring the Days 5–7 work to be visible to anyone evaluating it.</p>
+</div>
+
+<!-- ══════════════════════════ 10 ══════════════════════════ -->
+<div class="sec pb">
+<h2><span class="n">10</span>Roadmap</h2>
+
+<h3>The 7-day plan, current position</h3>
+<table>
+  <thead><tr><th style="width:12%">Day</th><th style="width:16%">Status</th><th>Deliverable</th></tr></thead>
+  <tbody>
+    <tr><td><strong>1</strong></td><td><span class="pill p-ok">Complete</span></td><td>Project skeleton and the Event schema — the vocabulary everything else speaks.</td></tr>
+    <tr><td><strong>2</strong></td><td><span class="pill p-ok">Complete</span></td><td>Tracer context manager, in-memory and SQLite storage.</td></tr>
+    <tr><td><strong>3</strong></td><td><span class="pill p-ok">Complete</span></td><td>CLI (<code>list</code>/<code>view</code>) and the text timeline renderer.</td></tr>
+    <tr><td><strong>4</strong></td><td><span class="pill p-ok">Complete</span></td><td>OpenAI adapter with auto-traced completions and nested tool calls.</td></tr>
+    <tr><td><strong>4a</strong></td><td><span class="pill p-ok">Complete</span></td><td>Tool-call validation — security follow-up from pre-publication review.</td></tr>
+    <tr><td><strong>4b</strong></td><td><span class="pill p-ok">Complete</span></td><td>Provider portability verified against xAI, Groq, and Ollama. Zero adapter changes.</td></tr>
+    <tr><td><strong>5</strong></td><td><span class="pill p-ok">Complete</span></td><td>Read-only JSON API server; tree-builder extracted for shared use; cheaper summary listing.</td></tr>
+    <tr><td><strong>6</strong></td><td><span class="pill p-part">Next</span></td><td>The HTML/JS timeline UI — expandable steps, highlighted errors and retries. Consumes the Day 5 API.</td></tr>
+    <tr><td><strong>7</strong></td><td><span class="pill p-no">Planned</span></td><td>Polish, documentation, and the v0.1.0 public release.</td></tr>
+  </tbody>
+</table>
+
+<h3>Recommended priorities beyond v0.1.0</h3>
+<p>Ordered by the ratio of risk removed to effort required:</p>
+<table>
+  <thead><tr><th style="width:6%">#</th><th style="width:28%">Item</th><th style="width:14%">Addresses</th><th>Rationale</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><strong>Streaming support</strong></td><td>§9.1</td><td>Currently produces silently wrong traces, and streaming is the default in user-facing agents. Wrong data is worse than no data.</td></tr>
+    <tr><td>2</td><td><strong>Redaction hook</strong></td><td>§9.2</td><td>The single largest blocker to production and regulated adoption. A payload-transform callback is modest work with disproportionate unlock.</td></tr>
+    <tr><td>3</td><td><strong>Async client support</strong></td><td>§9.4</td><td>Expands the addressable use cases substantially; most production agent code is async.</td></tr>
+    <tr><td>4</td><td><strong>Incremental flush</strong></td><td>§9.3</td><td>Makes hard crashes and long runs survivable. The upsert-based storage layer already supports it.</td></tr>
+    <tr><td>5</td><td><strong>Anthropic adapter</strong></td><td>§9.9</td><td>The first genuine test of the framework-agnostic claim — and the architecture was explicitly designed for it.</td></tr>
+    <tr><td>6</td><td><strong>Cost estimation</strong></td><td>New</td><td>Tokens are already captured. Multiplying by a price table turns a debugging tool into a budget tool, which changes who cares about it.</td></tr>
+    <tr><td>7</td><td><strong>Loop detection</strong></td><td>New</td><td>Automatically flagging "this agent repeated the same call five times" is the difference between a viewer and an analyser.</td></tr>
+    <tr><td>8</td><td><strong>OpenTelemetry export</strong></td><td>§9.9</td><td>Lets traces flow into existing infrastructure instead of competing with it.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ══════════════════════════ 11 ══════════════════════════ -->
+<div class="sec">
+<h2><span class="n">11</span>Why We Are Doing This</h2>
+
+<h3>11.1 The bet on where the difficulty moves</h3>
+<p>Building an agent is now easy; a working loop is an afternoon's work. <strong>Trusting an agent
+remains hard.</strong> As agents move from demos into paths where they spend money, touch customer
+data, and take actions with consequences, the binding constraint shifts from capability to
+verifiability. Tooling that answers <em>"what did it actually do, and why?"</em> becomes
+infrastructure rather than convenience. NeuroTrace is a position on that shift.</p>
+
+<h3>11.2 Why local-first, specifically</h3>
+<p>The hosted platforms are capable, and for many teams they are the right answer. But a meaningful
+segment cannot use them at any price, because their prompts and tool payloads cannot leave their
+infrastructure. That segment is currently served by <code>print()</code>. Serving it with a
+zero-dependency local library is a narrow, defensible position that does not require out-competing a
+funded platform on features.</p>
+
+<h3>11.3 Why framework-agnostic, specifically</h3>
+<p>Every agent framework ships its own tracing, and every one of them ties observability to a
+framework choice that teams are still actively revisiting. A trace format that survives switching
+frameworks — or writing the loop by hand against a raw SDK — is worth more over time than one that
+does not, because it is the artefact that accumulates history.</p>
+
+<h3>11.4 Why build it in this order</h3>
+<p>Core, then adapters, then viewer. A viewer with no real data to display is a mockup; an adapter
+with nowhere to send data is a stub. Building the recording equipment first meant every subsequent
+layer was validated against real captured traces rather than imagined ones. The visible cost is that
+the most demo-able component arrives last — a real trade, made deliberately.</p>
+
+<h3>11.5 What success looks like</h3>
+<ul>
+  <li><strong>Near term:</strong> a developer diagnoses an agent failure from a trace instead of
+  re-running with print statements, and it takes minutes rather than hours.</li>
+  <li><strong>Medium term:</strong> a team compares four providers on latency, token spend, and
+  tool-calling reliability using identical code and directly comparable traces.</li>
+  <li><strong>Long term:</strong> the trace becomes the unit of record for agent behaviour — the
+  thing attached to a bug report, reviewed in a security audit, and diffed between releases.</li>
+</ul>
+
+<div class="box">
+  <span class="lbl">The honest summary</span>
+  <p>NeuroTrace is a well-architected pre-release library that has solved the hard part — capturing
+  causally-linked agent execution with near-zero adoption cost and genuine provider independence —
+  and has not yet built the part that makes it obviously valuable to someone who has not read the
+  code. The engineering judgement on display is above the norm for a project this young. The gap
+  between its positioning and its shipped surface is real, documented in Section 9, and closable in
+  the three days already planned.</p>
+</div>
+</div>
+
+<!-- ══════════════════════════ 12 ══════════════════════════ -->
+<div class="sec pb">
+<h2><span class="n">12</span>Appendix</h2>
+
+<h3>12.1 Project metrics</h3>
+<table>
+  <thead><tr><th style="width:40%">Metric</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Library source</td><td>~1,200 lines across 9 modules</td></tr>
+    <tr><td>Test suite</td><td>55 tests, 8 modules, all passing (verified 20 Jul 2026)</td></tr>
+    <tr><td>Example agent</td><td>205 lines, runs offline with no API key</td></tr>
+    <tr><td>Documentation</td><td>README (147 lines), architecture notes (199 lines), this document</td></tr>
+    <tr><td>Runtime dependencies</td><td>fastapi, uvicorn, pydantic — declared Day 1, first used Day 5</td></tr>
+    <tr><td>Vendor SDK dependencies</td><td>None. The <code>openai</code> package is never imported by the library.</td></tr>
+    <tr><td>Python requirement</td><td>≥ 3.10</td></tr>
+    <tr><td>Commits</td><td>6, one per development day</td></tr>
+  </tbody>
+</table>
+
+<h4>Test distribution</h4>
+<table>
+  <thead><tr><th style="width:34%">Module</th><th style="width:14%">Tests</th><th>Focus</th></tr></thead>
+  <tbody>
+    <tr><td><code>test_openai_adapter.py</code></td><td>14</td><td>Proxy delegation, tool dispatch, nesting, validation, malformed arguments</td></tr>
+    <tr><td><code>test_server.py</code></td><td>12</td><td>All four endpoints, 404s, read-only enforcement, threadpool survival, missing database</td></tr>
+    <tr><td><code>test_cli.py</code></td><td>6</td><td>Subcommands, defaults, error exit codes</td></tr>
+    <tr><td><code>test_storage.py</code></td><td>6</td><td>Round-trip fidelity, upsert behaviour, both backends</td></tr>
+    <tr><td><code>test_events.py</code></td><td>5</td><td>Construction, serialization, ID uniqueness</td></tr>
+    <tr><td><code>test_tracer.py</code></td><td>5</td><td>Span timing, parent tracking, persistence on exception</td></tr>
+    <tr><td><code>test_tree.py</code></td><td>4</td><td>Nesting from parent_id, close-order independence, orphan recovery</td></tr>
+    <tr><td><code>test_render.py</code></td><td>3</td><td>Text output, error annotation, empty traces</td></tr>
+  </tbody>
+</table>
+
+<h3>12.2 Commands</h3>
+<pre><span class="c"># Install for development</span>
+pip install -e <span class="s">".[dev]"</span>
+pytest
+
+<span class="c"># Generate a trace offline — no API key required</span>
+python examples/openai_agent.py
+
+<span class="c"># Or against a real provider</span>
+python examples/openai_agent.py --provider groq   <span class="c"># openai | xai | groq | ollama</span>
+
+<span class="c"># Inspect</span>
+neurotrace list traces.db                          <span class="c"># every run, with event/error counts</span>
+neurotrace view traces.db                          <span class="c"># most recent run</span>
+neurotrace view traces.db --trace-id &lt;id&gt;          <span class="c"># a specific run</span>
+
+<span class="c"># Serve as JSON (loopback only by default)</span>
+neurotrace serve traces.db                         <span class="c"># http://127.0.0.1:8756</span>
+curl localhost:8756/api/traces                     <span class="c"># summaries</span>
+curl localhost:8756/api/traces/&lt;id&gt;/tree           <span class="c"># nested timeline</span></pre>
+
+<h3>12.3 Glossary</h3>
+<table>
+  <thead><tr><th style="width:22%">Term</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Agent</strong></td><td>A program that uses a language model in a loop to accomplish a goal, calling tools along the way.</td></tr>
+    <tr><td><strong>LLM call</strong></td><td>One round trip to the model. Costs tokens and takes time — the dominant contributor to both cost and latency.</td></tr>
+    <tr><td><strong>Tool call</strong></td><td>The agent invoking an external capability — a function, an API, a database query — rather than the model itself.</td></tr>
+    <tr><td><strong>Trace</strong></td><td>The complete recorded history of one agent run, start to finish.</td></tr>
+    <tr><td><strong>Event</strong></td><td>One recorded occurrence within a run. A trace is an ordered list of events.</td></tr>
+    <tr><td><strong>Span</strong></td><td>An event with a duration — it opens, work happens, it closes. LLM calls and tool calls are spans.</td></tr>
+    <tr><td><strong>Payload</strong></td><td>The type-specific content an event carries; for an LLM call, the prompt, response, and token counts.</td></tr>
+    <tr><td><strong>Adapter</strong></td><td>Code translating a specific framework's or vendor's conventions into NeuroTrace's event format.</td></tr>
+    <tr><td><strong>Tracer</strong></td><td>The component that wraps the agent loop and does the recording — a black-box flight recorder.</td></tr>
+    <tr><td><strong>Wire format</strong></td><td>The shape of the request and response on the network, independent of any particular vendor's SDK. What the adapter actually targets.</td></tr>
+    <tr><td><strong>Proxy</strong></td><td>A wrapper object standing in for another, intercepting some calls and passing the rest through untouched.</td></tr>
+    <tr><td><strong>Tool schema</strong></td><td>The JSON description of a tool shown to the model — its name, purpose, and permitted parameters. In NeuroTrace, an enforced boundary.</td></tr>
+    <tr><td><strong>Hallucinated call</strong></td><td>The model requesting a tool that does not exist, or arguments that were never offered.</td></tr>
+    <tr><td><strong>Upsert</strong></td><td>Insert-or-update. Used so re-saving an in-progress trace refreshes rows rather than duplicating them.</td></tr>
+  </tbody>
+</table>
+
+<h3>12.4 Source documents</h3>
+<p>This document was compiled by reading the complete repository, originally at commit
+<code>2689c71</code> ("Day 4b: run against any OpenAI-compatible provider") and revised after the
+Day 5 API server work: all nine library modules, the example agent, all eight test modules,
+<code>README.md</code>, <code>docs/architecture.md</code>, <code>NeuroTrace-Explained.md</code>,
+<code>pyproject.toml</code>, and the git history. Capability claims were verified against the code;
+the 55-test result cited was produced by running the suite, and the API behaviour described in
+Sections 5 and 7 was verified against a live server over HTTP, on 20 July 2026.</p>
+</div>
+
+</body>
+</html>
