@@ -8,6 +8,22 @@ version = "0.1.0"
 description = "A trace debugger/visualizer for AI agent execution — inspect every LLM call, tool call, and decision your agent makes."
 readme = "README.md"
 requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Dheeraj Pranav", email = "krovvididheeraj@gmail.com" }]
+keywords = ["llm", "agents", "observability", "tracing", "debugging", "openai", "devtools"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Debuggers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "fastapi>=0.110",
     "uvicorn>=0.29",
@@ -16,6 +32,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "httpx2"]  # httpx2 backs starlette's TestClient
+
+[project.urls]
+Repository = "https://github.com/DheerajPranav/neurotrace"
+Changelog = "https://github.com/DheerajPranav/neurotrace/blob/main/CHANGELOG.md"
 
 [project.scripts]
 neurotrace = "neurotrace.cli:main"

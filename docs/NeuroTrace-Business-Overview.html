@@ -101,9 +101,9 @@
   </div>
   <div class="meta">
     <div class="meta-grid">
-      <div><strong>Version</strong><br>0.1.0 (pre-release)</div>
-      <div><strong>Status</strong><br>Day 5 of 7 · API complete</div>
-      <div><strong>Date</strong><br>20 July 2026</div>
+      <div><strong>Version</strong><br>0.1.0 (released)</div>
+      <div><strong>Status</strong><br>Complete · 7 of 7 days</div>
+      <div><strong>Date</strong><br>21 July 2026</div>
       <div><strong>Owner</strong><br>Dheeraj Pranav</div>
       <div><strong>Language</strong><br>Python ≥ 3.10</div>
       <div><strong>Repository</strong><br>github.com/DheerajPranav/neurotrace</div>
@@ -123,7 +123,7 @@
   <li><span class="t">Capabilities</span> — <span class="d">what works today, verified</span></li>
   <li><span class="t">Competitive Advantages</span> — <span class="d">why this instead of the alternatives</span></li>
   <li><span class="t">Limitations &amp; Risks</span> — <span class="d">an honest register of what it cannot do</span></li>
-  <li><span class="t">Roadmap</span> — <span class="d">Days 5–7 and beyond</span></li>
+  <li><span class="t">Roadmap</span> — <span class="d">the completed 7-day plan and beyond</span></li>
   <li><span class="t">Why We Are Doing This</span> — <span class="d">strategic rationale</span></li>
   <li><span class="t">Appendix</span> — <span class="d">metrics, commands, glossary</span></li>
 </ol>
@@ -145,25 +145,25 @@ NeuroTrace captures the run <em>once</em>, in full, so diagnosis becomes reading
 the dice.</p>
 
 <div class="kpis">
-  <div class="kpi"><div class="v">~1,200</div><div class="l">Lines of library code</div></div>
-  <div class="kpi"><div class="v">55</div><div class="l">Tests, all passing</div></div>
+  <div class="kpi"><div class="v">~1,270</div><div class="l">Lines of library code</div></div>
+  <div class="kpi"><div class="v">58</div><div class="l">Tests, all passing</div></div>
   <div class="kpi"><div class="v">1</div><div class="l">Line of code to adopt</div></div>
   <div class="kpi"><div class="v">4+</div><div class="l">LLM providers supported</div></div>
 </div>
 
 <h3>What is complete</h3>
-<p>The capture path is finished end to end, and the data is now reachable by other software. The
-event schema, the tracer, both storage backends (in-memory and SQLite), the OpenAI-compatible adapter
-with security validation, the command-line interface, a terminal timeline renderer, and a read-only
-JSON API server all work and are covered by tests. An agent adopts NeuroTrace by changing one
-construction line; the loop itself is untouched.</p>
+<p>The product is finished end to end for v0.1.0 — run an agent, open a page, click through what it
+did. The event schema, the tracer, both storage backends (in-memory and SQLite), the
+OpenAI-compatible adapter with security validation, the command-line interface, a terminal timeline
+renderer, a read-only JSON API server, and the browser timeline viewer all work and are covered by
+tests. An agent adopts NeuroTrace by changing one construction line; the loop itself is untouched.</p>
 
 <h3>What is not</h3>
-<p>The graphical HTML timeline viewer — arguably the most demo-able piece — is not built, though the
-API it will consume now exists. Streaming responses are not captured correctly. There is no redaction
-of sensitive data, and no async or threaded agent support. These are enumerated honestly in
-<strong>Section 9</strong>, because documentation that oversells a pre-release library is worse
-than none.</p>
+<p>Streaming responses are not captured correctly — a streamed answer records only when it began, not
+its content. There is no redaction of sensitive data, and no async or threaded agent support. These
+are enumerated honestly in <strong>Section 9</strong>, because documentation that oversells a young
+library is worse than none — but none of them block the core loop of capturing a run and inspecting
+it.</p>
 
 <div class="box">
   <span class="lbl">The one-sentence pitch</span>
@@ -344,11 +344,11 @@ translators for specific vendors, and the presentation surface.</p>
   <text x="36" y="353" font-size="9.5" fill="#4a5568">parent_id links; render.py draws it as</text>
   <text x="36" y="367" font-size="9.5" fill="#4a5568">text; server.py serves it as JSON.</text>
 
-  <rect x="358" y="302" width="322" height="84" rx="4" fill="#fdf6ef" stroke="#d9a86c" stroke-dasharray="4 3"/>
-  <text x="374" y="322" font-size="11.5" font-weight="bold" fill="#a5601f">NOT YET BUILT &nbsp;·&nbsp; Day 6</text>
-  <text x="374" y="339" font-size="9.5" fill="#7a5a35">HTML/JS timeline UI, served as a static</text>
-  <text x="374" y="353" font-size="9.5" fill="#7a5a35">asset by the Day 5 app. The API and the</text>
-  <text x="374" y="367" font-size="9.5" fill="#7a5a35">tree-builder it consumes both exist.</text>
+  <rect x="358" y="302" width="322" height="84" rx="4" fill="#f2f6fc" stroke="#4a76c4" stroke-width="1.4"/>
+  <text x="374" y="322" font-size="11.5" font-weight="bold" fill="#2b4f8c">BROWSER VIEWER &nbsp;·&nbsp; viewer/static/</text>
+  <text x="374" y="339" font-size="9.5" fill="#4a5568">A single self-contained HTML timeline,</text>
+  <text x="374" y="353" font-size="9.5" fill="#4a5568">served at GET / by the same app. Consumes</text>
+  <text x="374" y="367" font-size="9.5" fill="#4a5568">/api/traces/{id}/tree — no external requests.</text>
 </svg>
 <div class="cap">Figure 1 — System layers. Arrows indicate dependency direction: each layer knows only the one beneath it, so a second adapter (Anthropic, LangChain) plugs in without touching core, and the viewer works against any adapter's output.</div>
 </div>
@@ -609,21 +609,22 @@ distinguish it:</p>
   unmodified so real bugs are not buried in a trace entry.</li>
 </ul>
 
-<h3><code>viewer/tree.py</code> — the shared tree builder <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(52 lines)</span></h3>
+<h3><code>viewer/tree.py</code> — the shared tree builder <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(53 lines)</span></h3>
 <p>Turns the flat, <code>parent_id</code>-linked event list back into a nested structure. Day 3
 deliberately kept this logic out of the CLI on the grounds that a real UI would need it; Day 5's API
 server became that second consumer, so it moved here and both callers share one implementation rather
 than two that drift. It also re-attaches orphaned events as roots — an event pointing at a parent not
 present in the trace was previously dropped from the timeline entirely.</p>
 
-<h3><code>viewer/render.py</code> — the terminal timeline <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(66 lines)</span></h3>
+<h3><code>viewer/render.py</code> — the terminal timeline <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(70 lines)</span></h3>
 <p>Presentation only, since the tree logic moved out. Returns a string rather than printing, so the
 CLI prints it, the API serves it, and tests assert on it directly.</p>
 
-<h3><code>viewer/server.py</code> — the JSON API <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(103 lines)</span></h3>
-<p>A read-only FastAPI application over one trace database, exposing four endpoints: trace summaries,
-one trace flat as stored, one trace nested as a timeline draws it, and one trace as rendered text.
-Three decisions carry weight:</p>
+<h3><code>viewer/server.py</code> — the JSON API and viewer host <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(115 lines)</span></h3>
+<p>A read-only FastAPI application over one trace database. It exposes four JSON endpoints — trace
+summaries, one trace flat as stored, one trace nested as a timeline draws it, and one trace as
+rendered text — and serves the browser viewer itself at <code>GET /</code>. Three decisions carry
+weight:</p>
 <ul>
   <li><strong>A connection per request.</strong> FastAPI runs synchronous endpoints in a worker
   threadpool, and SQLite rejects a connection used off its creating thread — so the tracer's
@@ -637,11 +638,24 @@ Three decisions carry weight:</p>
   making a wrong path indistinguishable from an unused one.</li>
 </ul>
 
-<h3><code>cli.py</code> — the interface <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(81 lines)</span></h3>
-<p>Two subcommands, <code>list</code> and <code>view</code>. <code>view</code> defaults to the most
-recently started trace, because the common need immediately after a run is "show me what just
-happened," not "let me look up an ID first." User errors (bad ID, empty database) exit with status 1
-and a message on stderr rather than a traceback — they are expected conditions, not bugs.</p>
+<h3><code>viewer/static/index.html</code> — the browser timeline <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(549 lines)</span></h3>
+<p>The visual product: a single self-contained page — vanilla JavaScript, inline styles, no build
+step and no framework — served at <code>GET /</code>. It lists runs on the left and, on selection,
+draws the chosen run's timeline as an expandable tree; each span shows a duration bar scaled to the
+slowest span, and clicks reveal the full prompt, response, or tool arguments and result. Two
+properties are enforced by tests: the page issues <strong>no external requests</strong> (a trace holds
+your prompts verbatim, so a viewer that fetched a CDN font would leak them), and it renders trace
+content through the DOM text API, <strong>never as HTML</strong> — the browser-side continuation of
+the adapter's stance that trace content is data to display, not code to run.</p>
+<p><strong>Business value:</strong> this is the piece a non-engineer can look at. It turns "we capture
+agent traces" from a claim into a two-minute demo.</p>
+
+<h3><code>cli.py</code> — the interface <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(121 lines)</span></h3>
+<p>Three subcommands: <code>list</code>, <code>view</code>, and <code>serve</code> (the browser
+viewer plus the JSON API). <code>view</code> defaults to the most recently started trace, because the
+common need immediately after a run is "show me what just happened," not "let me look up an ID first."
+User errors (bad ID, empty database, missing file) exit with status 1 and a message on stderr rather
+than a traceback — they are expected conditions, not bugs.</p>
 
 <h3><code>examples/openai_agent.py</code> — the proof <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(205 lines)</span></h3>
 <p>A complete tool-calling agent that runs <strong>offline against a scripted client with no API
@@ -651,7 +665,7 @@ the very first trace a new user generates.</p>
 <p><strong>Business value:</strong> evaluation friction is near zero. A prospective user sees a real
 trace within a minute of cloning, without a credit card.</p>
 
-<h3><code>tests/</code> — the safety net <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(39 tests, 630 lines)</span></h3>
+<h3><code>tests/</code> — the safety net <span style="font-weight:400;color:#5c6773;font-size:9.5pt">(58 tests, 833 lines)</span></h3>
 <p>Tests outnumber the modules they cover, with the adapter carrying the most (14) — appropriate,
 since it holds the security-sensitive logic. They run against hand-written fakes with no SDK
 installed, which is both faster and more honest: mocking the vendor SDK's types would only assert
@@ -766,9 +780,9 @@ statement happened to throw first.</p>
     <tr><td>Zero-dependency instrumentation</td><td><span class="pill p-ok">Working</span></td><td>No vendor SDK required; works against dicts, pydantic models, and recorded fixtures.</td></tr>
     <tr><td>Terminal timeline + CLI</td><td><span class="pill p-ok">Working</span></td><td><code>neurotrace list</code>, <code>view</code>, and <code>serve</code>, with sensible defaults.</td></tr>
     <tr><td>Read-only JSON API</td><td><span class="pill p-ok">Working</span></td><td>Four endpoints over one trace database: summaries, flat trace, nested tree, rendered text. Loopback-bound by default.</td></tr>
+    <tr><td>Browser timeline viewer</td><td><span class="pill p-ok">Working</span></td><td>A single self-contained page served at <code>GET /</code>: run list, expandable tree, duration bars, payload detail. No external requests; trace content rendered as text.</td></tr>
     <tr><td>Offline example agent</td><td><span class="pill p-ok">Working</span></td><td>Runs with no API key and produces a deterministic trace including an error path.</td></tr>
     <tr><td>Retry capture</td><td><span class="pill p-part">Manual</span></td><td>The API exists; no adapter emits it automatically, so SDK-internal retries are invisible.</td></tr>
-    <tr><td>HTML/JS timeline viewer</td><td><span class="pill p-no">Not built</span></td><td>Planned Day 6. The API it consumes and the tree-builder it needs both exist now.</td></tr>
     <tr><td>Streaming responses</td><td><span class="pill p-no">Not built</span></td><td>See Section 9.1 — currently records incorrect data rather than failing loudly.</td></tr>
     <tr><td>Redaction / PII handling</td><td><span class="pill p-no">Not built</span></td><td>See Section 9.2. The most significant gap for production adoption.</td></tr>
     <tr><td>Async and concurrency</td><td><span class="pill p-no">Not built</span></td><td>See Section 9.4.</td></tr>
@@ -803,8 +817,9 @@ log: every tool invocation with every argument, including the ones that were rej
 
 <h3>8.5 Extensibility already paid for</h3>
 <p>The flat schema, the adapter interface, and the read-time tree construction were designed for a
-second adapter and a second consumer before either existed. Adding Anthropic support is a sibling
-module, not a rewrite; adding a graphical viewer reuses the existing tree-builder.</p>
+second adapter and a second consumer before either existed. That the browser viewer consumes the same
+pre-nested tree the terminal renderer walks — rather than re-deriving it in JavaScript — is that bet
+paying off; adding Anthropic support is likewise a sibling module, not a rewrite.</p>
 
 <h3>8.6 A visible standard of engineering judgement</h3>
 <p><code>docs/architecture.md</code> records not only what was decided but what was considered and
@@ -820,9 +835,9 @@ public, this reasoning is itself a credential.</p>
 
 <div class="box warn">
   <span class="lbl">Read this section first if you are evaluating adoption</span>
-  <p>NeuroTrace is a pre-release library at Day 4 of a 7-day plan. The capture path is solid; several
-  properties expected of production observability infrastructure are absent. They are listed here in
-  descending order of consequence, not descending order of comfort.</p>
+  <p>NeuroTrace is a young v0.1.0 library. The capture-and-inspect loop is complete and solid; several
+  properties expected of production observability infrastructure are still absent. They are listed
+  here in descending order of consequence, not descending order of comfort.</p>
 </div>
 
 <h3>9.1 Streaming responses record wrong data — silently</h3>
@@ -872,15 +887,16 @@ already upserts, so re-saving an in-progress trace updates rather than duplicate
 single-threaded synchronous agents, which is a real fraction of the market but not the majority of
 production deployments.</p>
 
-<h3>9.5 The flagship viewer does not exist</h3>
-<p>The product is described, in its own README, as "Chrome DevTools for agent runs." The terminal
-renderer delivers the structure but not the interaction — no expanding a step to read the full
-prompt, no filtering, no comparison. Section 3.3's tree is currently the entire visual product.</p>
-<p>Day 5 removed the dependency rather than the gap: the JSON API the UI will consume now exists and
-serves a pre-nested tree, so Day 6 is a rendering exercise rather than a rendering <em>and</em>
-data-plumbing exercise.</p>
-<p><strong>Severity: medium</strong> for utility, <strong>high</strong> for adoption and demo value.
-This remains the largest gap between the stated positioning and the shipped artefact.</p>
+<h3>9.5 The viewer is basic <span class="pill p-part">shipped in Day 6</span></h3>
+<p>The browser timeline now exists: a run list, an expandable tree, per-span duration bars, and
+payload detail on click, served at <code>GET /</code>. That closes the "Chrome DevTools for agents"
+positioning at the level of <em>inspecting one run</em>. What it does <em>not</em> yet do is the
+analysis layer that would make it a tool rather than a viewer: no text search across a trace, no
+filtering by event type or error, no side-by-side comparison of two runs, and no automatic flagging
+of pathologies like a repeated tool loop.</p>
+<p><strong>Severity: low</strong> for the core inspect-a-run use case, <strong>medium</strong> for the
+larger "analyser, not just viewer" ambition. The data plumbing for all of the above already exists in
+the API; these are additive UI features, not architectural gaps.</p>
 
 <h3>9.6 Prompt capture is lossy by design</h3>
 <p>The messages list is flattened into a single string for the event payload. This is adequate for
@@ -928,7 +944,8 @@ becomes a goal, the payload format must change.</p>
 <p>The clearest commercial risk is not technical. Agent observability is an actively contested
 category with funded entrants (LangSmith, Langfuse, Braintrust, Arize) and vendor-native tooling
 improving steadily. NeuroTrace's defensible positions are local-first data custody and true framework
-independence — both real, and both requiring the Days 5–7 work to be visible to anyone evaluating it.</p>
+independence — both real, and both now demonstrable end to end in the shipped v0.1.0 rather than
+promised.</p>
 </div>
 
 <!-- ══════════════════════════ 10 ══════════════════════════ -->
@@ -946,8 +963,8 @@ independence — both real, and both requiring the Days 5–7 work to be visible
     <tr><td><strong>4a</strong></td><td><span class="pill p-ok">Complete</span></td><td>Tool-call validation — security follow-up from pre-publication review.</td></tr>
     <tr><td><strong>4b</strong></td><td><span class="pill p-ok">Complete</span></td><td>Provider portability verified against xAI, Groq, and Ollama. Zero adapter changes.</td></tr>
     <tr><td><strong>5</strong></td><td><span class="pill p-ok">Complete</span></td><td>Read-only JSON API server; tree-builder extracted for shared use; cheaper summary listing.</td></tr>
-    <tr><td><strong>6</strong></td><td><span class="pill p-part">Next</span></td><td>The HTML/JS timeline UI — expandable steps, highlighted errors and retries. Consumes the Day 5 API.</td></tr>
-    <tr><td><strong>7</strong></td><td><span class="pill p-no">Planned</span></td><td>Polish, documentation, and the v0.1.0 public release.</td></tr>
+    <tr><td><strong>6</strong></td><td><span class="pill p-ok">Complete</span></td><td>The browser timeline UI — expandable steps, duration bars, payload detail, highlighted errors. Consumes the Day 5 API; served at <code>GET /</code>.</td></tr>
+    <tr><td><strong>7</strong></td><td><span class="pill p-ok">Complete</span></td><td>Polish, documentation, Apache-2.0 license, changelog, packaging metadata — the v0.1.0 release.</td></tr>
   </tbody>
 </table>
 
@@ -995,8 +1012,9 @@ does not, because it is the artefact that accumulates history.</p>
 <h3>11.4 Why build it in this order</h3>
 <p>Core, then adapters, then viewer. A viewer with no real data to display is a mockup; an adapter
 with nowhere to send data is a stub. Building the recording equipment first meant every subsequent
-layer was validated against real captured traces rather than imagined ones. The visible cost is that
-the most demo-able component arrives last — a real trade, made deliberately.</p>
+layer was validated against real captured traces rather than imagined ones. The visible cost was that
+the most demo-able component arrived last — a deliberate trade, and with the Day 6 viewer shipped, one
+now fully paid off.</p>
 
 <h3>11.5 What success looks like</h3>
 <ul>
@@ -1010,12 +1028,12 @@ the most demo-able component arrives last — a real trade, made deliberately.</
 
 <div class="box">
   <span class="lbl">The honest summary</span>
-  <p>NeuroTrace is a well-architected pre-release library that has solved the hard part — capturing
+  <p>NeuroTrace is a well-architected v0.1.0 that has solved the hard part — capturing
   causally-linked agent execution with near-zero adoption cost and genuine provider independence —
-  and has not yet built the part that makes it obviously valuable to someone who has not read the
-  code. The engineering judgement on display is above the norm for a project this young. The gap
-  between its positioning and its shipped surface is real, documented in Section 9, and closable in
-  the three days already planned.</p>
+  and now ships the part that makes it obviously valuable to someone who has not read the code: a
+  browser timeline they can click through. The engineering judgement on display is above the norm for
+  a project this young. The remaining gaps — streaming, redaction, async — are real, documented
+  honestly in Section 9, and none of them block the core loop of capturing a run and inspecting it.</p>
 </div>
 </div>
 
@@ -1027,14 +1045,14 @@ the most demo-able component arrives last — a real trade, made deliberately.</
 <table>
   <thead><tr><th style="width:40%">Metric</th><th>Value</th></tr></thead>
   <tbody>
-    <tr><td>Library source</td><td>~1,200 lines across 9 modules</td></tr>
-    <tr><td>Test suite</td><td>55 tests, 8 modules, all passing (verified 20 Jul 2026)</td></tr>
+    <tr><td>Library source</td><td>~1,270 lines of Python across 9 modules, plus a 549-line self-contained browser viewer</td></tr>
+    <tr><td>Test suite</td><td>58 tests, 8 modules, all passing (verified 21 Jul 2026)</td></tr>
     <tr><td>Example agent</td><td>205 lines, runs offline with no API key</td></tr>
-    <tr><td>Documentation</td><td>README (147 lines), architecture notes (199 lines), this document</td></tr>
+    <tr><td>Documentation</td><td>README (192 lines), architecture notes (311 lines), a changelog and Apache-2.0 license, and this document</td></tr>
     <tr><td>Runtime dependencies</td><td>fastapi, uvicorn, pydantic — declared Day 1, first used Day 5</td></tr>
     <tr><td>Vendor SDK dependencies</td><td>None. The <code>openai</code> package is never imported by the library.</td></tr>
     <tr><td>Python requirement</td><td>≥ 3.10</td></tr>
-    <tr><td>Commits</td><td>6, one per development day</td></tr>
+    <tr><td>Release</td><td>v0.1.0 — Apache-2.0 licensed, packaged as a wheel (viewer asset included)</td></tr>
   </tbody>
 </table>
 
@@ -1043,7 +1061,7 @@ the most demo-able component arrives last — a real trade, made deliberately.</
   <thead><tr><th style="width:34%">Module</th><th style="width:14%">Tests</th><th>Focus</th></tr></thead>
   <tbody>
     <tr><td><code>test_openai_adapter.py</code></td><td>14</td><td>Proxy delegation, tool dispatch, nesting, validation, malformed arguments</td></tr>
-    <tr><td><code>test_server.py</code></td><td>12</td><td>All four endpoints, 404s, read-only enforcement, threadpool survival, missing database</td></tr>
+    <tr><td><code>test_server.py</code></td><td>15</td><td>All four endpoints, 404s, read-only enforcement, threadpool survival, missing database, viewer serving, no-external-requests</td></tr>
     <tr><td><code>test_cli.py</code></td><td>6</td><td>Subcommands, defaults, error exit codes</td></tr>
     <tr><td><code>test_storage.py</code></td><td>6</td><td>Round-trip fidelity, upsert behaviour, both backends</td></tr>
     <tr><td><code>test_events.py</code></td><td>5</td><td>Construction, serialization, ID uniqueness</td></tr>
@@ -1069,8 +1087,8 @@ neurotrace list traces.db                          <span class="c"># every run, 
 neurotrace view traces.db                          <span class="c"># most recent run</span>
 neurotrace view traces.db --trace-id &lt;id&gt;          <span class="c"># a specific run</span>
 
-<span class="c"># Serve as JSON (loopback only by default)</span>
-neurotrace serve traces.db                         <span class="c"># http://127.0.0.1:8756</span>
+<span class="c"># Serve the browser viewer + JSON API (loopback only by default)</span>
+neurotrace serve traces.db                         <span class="c"># open http://127.0.0.1:8756/ for the timeline</span>
 curl localhost:8756/api/traces                     <span class="c"># summaries</span>
 curl localhost:8756/api/traces/&lt;id&gt;/tree           <span class="c"># nested timeline</span></pre>
 
@@ -1096,13 +1114,14 @@ curl localhost:8756/api/traces/&lt;id&gt;/tree           <span class="c"># neste
 </table>
 
 <h3>12.4 Source documents</h3>
-<p>This document was compiled by reading the complete repository, originally at commit
-<code>2689c71</code> ("Day 4b: run against any OpenAI-compatible provider") and revised after the
-Day 5 API server work: all nine library modules, the example agent, all eight test modules,
-<code>README.md</code>, <code>docs/architecture.md</code>, <code>NeuroTrace-Explained.md</code>,
+<p>This document was compiled by reading the complete repository and revised at the v0.1.0 release
+after the Day 6 browser viewer and Day 7 packaging work: all nine library modules and the
+549-line viewer, the example agent, all eight test modules, <code>README.md</code>,
+<code>docs/architecture.md</code>, <code>NeuroTrace-Explained.md</code>, <code>CHANGELOG.md</code>,
 <code>pyproject.toml</code>, and the git history. Capability claims were verified against the code;
-the 55-test result cited was produced by running the suite, and the API behaviour described in
-Sections 5 and 7 was verified against a live server over HTTP, on 20 July 2026.</p>
+the 58-test result cited was produced by running the suite, and the API and viewer behaviour
+described in Sections 5, 7, and the walkthrough was verified against a live server over HTTP, on
+21 July 2026.</p>
 </div>
 
 </body>

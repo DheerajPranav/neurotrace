@@ -146,8 +146,9 @@ By Day 7, you'll be able to:
 3. You run `neurotrace serve traces.db` and open the page it prints
 4. A local webpage shows a chronological list: "10:03:01 — LLM call (420ms) → asked for a tool to use," "10:03:02 — Tool call: search('weather in Chicago') → result," etc., with errors/retries highlighted in red, and you can click to expand any step and see the full prompt/response or tool arguments.
 
-Steps 1 and 2 have worked since Day 4. Step 3 works as of Day 5, but hands
-back raw data rather than a page. Step 4 — the page itself — is Day 6.
+All four steps work as of Day 6: steps 1 and 2 since Day 4, step 3 (the
+data) since Day 5, and step 4 (the actual page) as of Day 6. Day 7 tagged it
+all as the first release, **v0.1.0**.
 
 That's the whole product for v0.1.0 — later versions could compare two runs side by side, auto-flag "this agent is stuck in a loop," estimate cost, etc., but those are stretch goals, not part of the 7-day MVP.
 
@@ -170,8 +171,8 @@ matches what actually exists.)*
 | **4a** ✅ | *(unplanned)* Security fix: checking the tool calls the AI asks for before running them |
 | **4b** ✅ | *(unplanned)* Running against cheaper/free AI providers instead of only OpenAI |
 | **5** ✅ | A small local web server that can hand back a trace as data |
-| **6** | The actual visual timeline you look at in a browser |
-| **7** | Polish, documentation, first public release (v0.1.0) |
+| **6** ✅ | The actual visual timeline you look at in a browser |
+| **7** ✅ | Polish, documentation, first public release (v0.1.0) |
 
 Days 4a and 4b weren't in the original plan — 4a came out of a security
 review before making the repo public, and 4b came from wanting to stop
@@ -459,3 +460,90 @@ way to ask for the data it's going to draw, and that's what got built.
 **Bottom line for today:** the data is now reachable by a webpage.
 Tomorrow (Day 6) that webpage gets built, and the project finally becomes
 something you *look at* rather than read in a terminal.
+
+---
+
+### Day 6 — 2026-07-21
+
+**In plain terms:** today the project finally became something you *look at*.
+Up to now the nicest way to see a run was an indented tree in the terminal.
+Now you run one command, open a page in your browser, and click through the
+whole run visually — the thing we've been building toward since Day 1.
+
+**What we actually did:**
+
+1. **Built the actual webpage** (`viewer/static/index.html`). It shows your
+   runs down the left side; click one and the right side fills with its
+   timeline — every LLM call and tool call as an expandable tree. Click any
+   step to see the full prompt, the response, or the tool's arguments and
+   result. Each step has a little bar showing how long it took relative to
+   the slowest step, so where the time went is visible at a glance. Anything
+   that errored is red.
+2. **Made the same server hand out the page.** You already had
+   `neurotrace serve` from Day 5; now it also serves the page itself at the
+   address it prints. One command, no separate thing to install.
+3. **Kept it a single file with zero outside pieces.** The whole page — its
+   styling, its logic — is one self-contained file. It never reaches out to
+   the internet for anything. That's deliberate: your traces contain your
+   prompts and your data, and a page that quietly fetched a font or a script
+   from some other website would be a way for that data to leak. Everything
+   stays on your machine. There's an automated test that fails if anyone
+   ever adds an outside link.
+4. **Made the page treat trace text as text, never as instructions.** A
+   subtle but real safety point: a trace contains whatever the AI wrote,
+   which you don't fully control. The page is careful to *display* that
+   content and never *run* it — otherwise a cleverly-worded model response
+   could hijack the viewer. This is the same instinct as the Day 4a security
+   fix, applied to the browser side.
+5. **Wrote 3 more tests** (58 total, all passing): the page loads, it's
+   packaged so a proper install serves it too, and it makes no outside
+   requests.
+
+**A note:** I couldn't take a screenshot for you from here (browser control
+wasn't available this session), but I verified the page is served correctly
+and that the data it draws matches the real trace exactly. To see it: run
+`neurotrace serve <your.db>` and open the `viewer:` link it prints.
+
+**Bottom line for today:** the product is now real end-to-end — run an agent,
+open a page, click through what it did. That was the whole goal.
+
+---
+
+### Day 7 — 2026-07-21
+
+**In plain terms:** today wasn't about new features — it was about calling
+what we've built **version 0.1.0** and making it presentable to anyone who
+finds the repo. Think of it as cleaning the house before guests arrive,
+rather than building another room.
+
+**What we actually did:**
+
+1. **Added a license** (`LICENSE`, the Apache License 2.0). This matters more
+   than it sounds: a public project with *no* license legally means "nobody
+   may use this." Apache 2.0 is a permissive "do what you like, no warranty"
+   license — like MIT, but it also spells out a patent grant and contribution
+   terms, which is why larger and company-backed projects tend to prefer it.
+   *(You picked this over MIT when I asked.)*
+2. **Wrote a changelog** (`CHANGELOG.md`) — a plain list of everything that's
+   in this first release, so anyone (including future-you) can see what
+   0.1.0 actually contains without reading the code.
+3. **Filled in the project's "ID card"** (`pyproject.toml`) — the author,
+   keywords, which Python versions it supports, and links back to the repo
+   and changelog. This is the information that would show on a package
+   listing if you ever publish it.
+4. **Confirmed the webpage ships inside the package.** Built the installable
+   package and checked that the page file is actually inside it — so someone
+   who installs NeuroTrace normally gets the viewer too, not just people who
+   clone the code.
+5. **Brought every document up to date** — this file, the README, the
+   technical design notes, and the business overview PDF — so none of them
+   still describe the viewer as "coming next."
+
+**Honest note on what's *not* in 0.1.0:** live/streaming AI responses aren't
+fully traced yet (when the AI streams its answer word-by-word, we currently
+only note when it started, not the full content). It's written down as the
+first thing to fix after this release rather than rushed in half-done.
+
+**Bottom line:** NeuroTrace is now a finished, released v0.1.0 — the 7-day
+plan is complete. From here, everything is improvement on a working product
+rather than construction of a missing one.

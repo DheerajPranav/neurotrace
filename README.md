@@ -15,10 +15,10 @@ can inspect it after the fact instead of re-running blind.
 
 ## Status
 
-Early build, in progress (v0.1.0 not yet tagged). Capture, storage, the
-OpenAI adapter, a terminal timeline, and a read-only JSON API work today;
-the HTML viewer and streaming support don't yet. See `docs/architecture.md`
-for design notes as they're written.
+**v0.1.0** — the first release. Capture, storage, the OpenAI-compatible
+adapter, a terminal timeline, a read-only JSON API, and a browser timeline
+all work. Streaming responses are the known gap (see `CHANGELOG.md`). Design
+notes as they were decided are in `docs/architecture.md`.
 
 ## Usage
 
@@ -60,16 +60,30 @@ scripted client, so no API key is needed:
 python examples/openai_agent.py && neurotrace view traces.db
 ```
 
-## HTTP API
+## Browser viewer
 
-`neurotrace serve traces.db` exposes the same traces as read-only JSON, for
-tooling that wants the data rather than the text timeline (and for the
-browser viewer, which is next):
+`neurotrace serve traces.db` starts a local server and prints a URL. Open it
+for the timeline: a list of runs on the left, and on the right an expandable
+tree where each span shows its duration as a bar and clicks open the full
+prompt/response or tool arguments/result. Errors are highlighted.
 
 ```console
 $ neurotrace serve traces.db
-serving traces.db on http://127.0.0.1:8756  (ctrl-c to stop)
+serving traces.db  (ctrl-c to stop)
+  viewer:  http://127.0.0.1:8756/
+  api:     http://127.0.0.1:8756/api/traces
+  docs:    http://127.0.0.1:8756/docs
 ```
+
+The page is a single self-contained HTML file with no external requests and
+no build step — a trace holds your prompts and tool data verbatim, so the
+viewer keeps all of it on your machine, and renders trace content as text
+rather than markup.
+
+## HTTP API
+
+The same server exposes the traces as read-only JSON, for tooling that wants
+the data rather than the page:
 
 | Endpoint | Returns |
 |---|---|
@@ -157,7 +171,7 @@ directory is still your tool's job.
 src/neurotrace/
 ├── core/       # event schema, tracer, storage
 ├── adapters/   # framework-specific instrumentation (OpenAI, LangChain, ...)
-└── viewer/     # tree building, text renderer, JSON API server (UI next)
+└── viewer/     # tree building, text renderer, JSON API, browser UI (static/)
 examples/       # runnable example agents
 tests/
 docs/
@@ -169,3 +183,10 @@ docs/
 pip install -e ".[dev]"
 pytest
 ```
+
+Release notes are in `CHANGELOG.md`; design decisions, day by day, are in
+`docs/architecture.md`.
+
+## License
+
+Apache-2.0 — see `LICENSE`.

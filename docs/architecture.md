@@ -254,11 +254,58 @@ so it's an opt-in optimization rather than a new abstract method that
 breaks other backends. `neurotrace list` uses it too, and now shows event
 and error counts.
 
-## Next (Day 6)
+## Day 6 — browser timeline
 
-The HTML/JS timeline itself, served as a static asset by this app against
-`/api/traces/{id}/tree`. Streaming responses remain the known gap in the
-adapter: `create(stream=True)` returns an iterator, so the current code
-records an empty response and a duration that only measures
-time-to-first-chunk — wrapping the iterator to accumulate deltas and close
-the span at the end is the fix, and it still wants its own day.
+**One self-contained HTML file, not a framework app.** The whole UI is
+`viewer/static/index.html` — vanilla JS, inline CSS, no build step, no
+dependency to install or version. A React/bundler front end would be the
+conventional choice and the wrong one here: it adds a toolchain and a
+`node_modules` to a Python package whose entire UI is a list and a tree, and
+it would need its own release process alongside the wheel. The page is small
+enough that plain DOM code is shorter than the config a framework would need.
+
+**Served by the same app at `GET /`, from disk per request.** The file ships
+inside the package (`Path(__file__).parent / "static"`), so a wheel install
+serves the page too, not just a source checkout — there's a test asserting
+that. Serving it from the app the API already runs is what lets Day 5's "no
+CORS" decision stand: same origin, so the page's `fetch` calls need no
+cross-origin headers, and nothing widens who can read a trace. Reading the
+file per request (rather than caching it at startup) costs a local file read
+and means editing the page during development needs no server restart.
+
+**No external requests, and trace content is text, never markup.** Two
+security properties, both tested. The page pulls no script, style, or font
+off a CDN: a trace holds prompts and tool results verbatim, so a viewer that
+phoned out would leak exactly the data the loopback bind protects — the test
+greps the served HTML for any absolute or protocol-relative `src`/`href`.
+And every value derived from a trace goes into the DOM through `textContent`,
+never `innerHTML`: payloads carry model output and tool results, which are
+untrusted strings, so rendering them as HTML would make the viewer a
+stored-XSS surface. This is the browser-side continuation of Day 4a's stance
+that trace content is data to display, not code to run.
+
+**Nesting is consumed, not re-derived.** The page renders
+`/api/traces/{id}/tree` directly — the `children` arrays are already the
+shape it draws. That's the Day 5 decision to resolve the tree server-side
+paying off: the JS walks a structure instead of reimplementing
+`children_by_parent` in a second language. Per-span duration bars scale to
+the slowest span in the same trace, with a minimum visible width so a
+sub-millisecond span still shows.
+
+## Day 7 — release (v0.1.0)
+
+**Tagging what exists, not adding scope.** Day 7 is packaging and docs: an
+an Apache-2.0 `LICENSE`, a `CHANGELOG.md`, PyPI metadata (authors, classifiers,
+keywords, URLs), and bringing README, the architecture notes, and the
+plain-language explainer current. The public repo had no license until now,
+which is "all rights reserved" by default — a worse state for a tool meant to
+be used than an explicit permissive license.
+
+**Streaming stays a known limitation, documented rather than rushed.**
+`create(stream=True)` returns an iterator, so the adapter still records an
+empty response and a duration that only measures time-to-first-chunk. The fix
+— wrapping the iterator to accumulate deltas and close the span when it's
+exhausted — is real work with its own edge cases (a consumer that abandons
+the iterator early, usage totals that only arrive in the final chunk), and
+shipping it half-done would be worse than naming it in the changelog. It's
+the first thing after 0.1.0, not part of it.
