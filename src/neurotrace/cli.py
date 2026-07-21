@@ -1,8 +1,8 @@
 """`neurotrace` command-line entry point.
 
 Three subcommands over a SQLiteStorage db: `list` (which traces are in this
-file), `view` (render one as text), and `serve` (expose them as JSON over
-HTTP). `view` defaults to the most recently started trace so
+file), `view` (render one as text), and `serve` (the browser timeline plus a
+read-only JSON API). `view` defaults to the most recently started trace so
 `neurotrace view traces.db` works right after a run without having to look up
 a trace_id first.
 """
@@ -72,9 +72,11 @@ def _cmd_serve(args: argparse.Namespace) -> int:
 
     import uvicorn
 
-    print(f"serving {args.db_path} on http://{args.host}:{args.port}  (ctrl-c to stop)")
-    print(f"  traces:  http://{args.host}:{args.port}/api/traces")
-    print(f"  docs:    http://{args.host}:{args.port}/docs")
+    base = f"http://{args.host}:{args.port}"
+    print(f"serving {args.db_path}  (ctrl-c to stop)")
+    print(f"  viewer:  {base}/")
+    print(f"  api:     {base}/api/traces")
+    print(f"  docs:    {base}/docs")
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
     return 0
 
@@ -96,7 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     view_parser.set_defaults(func=_cmd_view)
 
-    serve_parser = subparsers.add_parser("serve", help="serve traces as JSON over HTTP")
+    serve_parser = subparsers.add_parser("serve", help="serve the browser viewer + JSON API")
     serve_parser.add_argument("db_path")
     serve_parser.add_argument(
         "--host",

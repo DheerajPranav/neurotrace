@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from neurotrace.core.events import Trace, llm_call_event, tool_call_event
 from neurotrace.core.storage import SQLiteStorage
 from neurotrace.core.tracer import Tracer
-from neurotrace.viewer.server import create_app
+from neurotrace.viewer.server import _UI_FILE, create_app
 
 
 def _make_db(tmp_path: Path) -> Path:
@@ -125,3 +125,32 @@ def test_api_is_read_only(client: TestClient):
 
     assert client.post("/api/traces", json={}).status_code == 405
     assert client.delete(f"/api/traces/{trace_id}").status_code == 405
+
+
+def test_serves_the_viewer_ui(client: TestClient):
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    body = response.text
+    assert "NeuroTrace" in body
+    assert 'id="trace-list"' in body  # the mount point the JS fills in
+
+
+def test_ui_asset_is_packaged():
+    # Shipped alongside the module so a wheel install serves the page too,
+    # not only a source checkout.
+    assert _UI_FILE.exists()
+
+
+def test_ui_makes_no_external_requests(client: TestClient):
+    """The page must stay self-contained: a trace holds prompts and tool
+    results verbatim, so a viewer that pulled a script or font off a CDN would
+    leak exactly the data this tool keeps local. Encoded as a test so a stray
+    external reference can't slip in later."""
+    body = client.get("/").text
+
+    # No element loads a resource from off-machine: no absolute or
+    # protocol-relative src/href, and no @import pulling in a remote sheet.
+    for needle in ('src="http', "src='http", 'src="//', 'href="http', 'href="//', "@import url(http"):
+        assert needle not in body

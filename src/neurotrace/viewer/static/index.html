@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NeuroTrace</title>
+<!--
+  Self-contained on purpose: no external stylesheet, script, or font is
+  requested. A trace holds prompts, tool arguments, and tool results
+  verbatim, so a viewer that phoned a CDN would be leaking exactly the data
+  this tool exists to keep local. Everything the page needs ships in this
+  file, served by the same read-only app that serves /api.
+
+  Trace content is rendered with textContent, never innerHTML. Payloads carry
+  model output and tool results — untrusted strings — so injecting them as
+  markup would make the viewer a stored-XSS surface. Only the static chrome
+  below is HTML; every dynamic value goes in through the DOM text API.
+-->
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel-2: #1c222b;
+    --border: #2a313c;
+    --border-soft: #21272f;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --faint: #6e7681;
+    --guide: #30363d;
+    --sel: #1f6feb;
+    --sel-bg: rgba(56, 139, 253, 0.14);
+    --llm: #a5b4ff;
+    --llm-bg: rgba(124, 147, 255, 0.14);
+    --tool: #4bd0a0;
+    --tool-bg: rgba(63, 185, 143, 0.14);
+    --error: #ff8585;
+    --error-bg: rgba(242, 109, 109, 0.15);
+    --retry: #e3b341;
+    --retry-bg: rgba(227, 179, 65, 0.14);
+    --decision: #b0b8c4;
+    --decision-bg: rgba(160, 168, 180, 0.14);
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #ffffff;
+    --panel: #f6f8fa;
+    --panel-2: #eef1f4;
+    --border: #d0d7de;
+    --border-soft: #e4e8ec;
+    --text: #1f2328;
+    --muted: #656d76;
+    --faint: #818b98;
+    --guide: #d8dee4;
+    --sel: #0969da;
+    --sel-bg: rgba(9, 105, 218, 0.09);
+    --llm: #4b57c9;
+    --llm-bg: rgba(75, 87, 201, 0.10);
+    --tool: #147d5f;
+    --tool-bg: rgba(20, 125, 95, 0.10);
+    --error: #cf222e;
+    --error-bg: rgba(207, 34, 46, 0.09);
+    --retry: #9a6700;
+    --retry-bg: rgba(154, 103, 0, 0.10);
+    --decision: #57606a;
+    --decision-bg: rgba(87, 96, 106, 0.10);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; color: inherit; }
+
+  .app { display: grid; grid-template-rows: auto 1fr; height: 100vh; }
+
+  /* ---- top bar ---- */
+  header.top {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .brand { display: flex; align-items: baseline; gap: 8px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tool); align-self: center;
+                box-shadow: 0 0 0 3px var(--tool-bg); }
+  .brand .name { font-size: 15px; }
+  .brand .tag { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .spacer { flex: 1; }
+  .top button {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer;
+  }
+  .top button:hover { border-color: var(--faint); }
+
+  /* ---- layout ---- */
+  .body { display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+  @media (max-width: 720px) { .body { grid-template-columns: 1fr; } aside { display: none; } }
+
+  aside {
+    border-right: 1px solid var(--border);
+    background: var(--panel);
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .aside-head {
+    padding: 10px 14px; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--faint); position: sticky; top: 0;
+    background: var(--panel); border-bottom: 1px solid var(--border-soft);
+  }
+  .trace-item {
+    padding: 11px 14px; border-bottom: 1px solid var(--border-soft);
+    cursor: pointer; display: grid; gap: 4px;
+  }
+  .trace-item:hover { background: var(--panel-2); }
+  .trace-item.sel { background: var(--sel-bg); box-shadow: inset 3px 0 0 var(--sel); }
+  .trace-item .row1 { display: flex; align-items: baseline; gap: 8px; }
+  .trace-item .tname { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trace-item .ttime { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .trace-item .meta { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill {
+    font-size: 11px; padding: 1px 7px; border-radius: 999px;
+    background: var(--panel-2); color: var(--muted); border: 1px solid var(--border-soft);
+    font-variant-numeric: tabular-nums;
+  }
+  .pill.err { background: var(--error-bg); color: var(--error); border-color: transparent; }
+
+  /* ---- main ---- */
+  main { overflow-y: auto; min-height: 0; }
+  .trace-head { padding: 18px 22px 12px; border-bottom: 1px solid var(--border-soft); }
+  .trace-head h1 { margin: 0 0 4px; font-size: 18px; letter-spacing: -0.01em; }
+  .trace-head .sub { color: var(--muted); font-size: 12.5px; font-family: var(--mono); }
+  .trace-head .metarow { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .timeline { padding: 12px 16px 40px; }
+
+  /* nodes + tree guides */
+  .children { margin-left: 15px; padding-left: 13px; border-left: 1px solid var(--guide); }
+  .node { }
+  .node-row {
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 8px; border-radius: 7px; cursor: pointer;
+    position: relative;
+  }
+  .node-row:hover { background: var(--panel); }
+  .node-row.open { background: var(--panel); }
+  .caret {
+    width: 14px; height: 14px; flex: none; color: var(--faint);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: transform 0.12s ease; font-size: 10px;
+  }
+  .caret.rot { transform: rotate(90deg); }
+  .caret.leaf { visibility: hidden; }
+  .badge {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 5px; flex: none;
+    font-family: var(--mono);
+  }
+  .badge.llm_call { color: var(--llm); background: var(--llm-bg); }
+  .badge.tool_call { color: var(--tool); background: var(--tool-bg); }
+  .badge.error { color: var(--error); background: var(--error-bg); }
+  .badge.retry { color: var(--retry); background: var(--retry-bg); }
+  .badge.decision { color: var(--decision); background: var(--decision-bg); }
+  .label { font-weight: 500; }
+  .label.mono { font-family: var(--mono); font-weight: 400; }
+  .node-row.has-error .label { color: var(--error); }
+  .err-flag {
+    font-size: 11px; color: var(--error); background: var(--error-bg);
+    padding: 1px 7px; border-radius: 5px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 340px;
+  }
+  .grow { flex: 1; min-width: 8px; }
+  .dur { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+
+  /* duration bar — relative to the slowest span in the trace */
+  .bar-wrap { width: 68px; height: 5px; border-radius: 3px; background: var(--border-soft); flex: none; overflow: hidden; }
+  .bar { height: 100%; border-radius: 3px; }
+  .bar.llm_call { background: var(--llm); }
+  .bar.tool_call { background: var(--tool); }
+  .bar.error { background: var(--error); }
+  .bar.retry { background: var(--retry); }
+  .bar.decision { background: var(--decision); }
+
+  /* detail panel */
+  .detail {
+    margin: 2px 0 8px 34px; padding: 12px 14px;
+    background: var(--panel-2); border: 1px solid var(--border-soft);
+    border-radius: 8px;
+  }
+  .detail dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; align-items: baseline; }
+  .detail dt { color: var(--muted); font-size: 12px; }
+  .detail dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .detail .field { margin-top: 12px; }
+  .detail .field:first-child { margin-top: 0; }
+  .detail .field-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .detail pre {
+    margin: 0; padding: 10px 12px; border-radius: 6px;
+    background: var(--bg); border: 1px solid var(--border-soft);
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.55;
+    white-space: pre-wrap; word-break: break-word; overflow-x: auto; max-height: 340px;
+  }
+  .detail pre.err { color: var(--error); border-color: var(--error-bg); }
+
+  /* empty / message states */
+  .empty {
+    height: 100%; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 10px; color: var(--muted); text-align: center; padding: 40px;
+  }
+  .empty code {
+    font-family: var(--mono); background: var(--panel); padding: 3px 8px;
+    border-radius: 6px; border: 1px solid var(--border-soft); color: var(--text);
+  }
+  .empty .big { font-size: 15px; color: var(--text); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="dot"></span>
+      <span class="name">NeuroTrace</span>
+      <span class="tag">agent trace viewer</span>
+    </div>
+    <div class="spacer"></div>
+    <button id="refresh" title="Reload traces">Refresh</button>
+    <button id="theme" title="Toggle light / dark">Theme</button>
+  </header>
+  <div class="body">
+    <aside>
+      <div class="aside-head">Traces</div>
+      <div id="trace-list"></div>
+    </aside>
+    <main id="main"></main>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var state = { traces: [], selectedId: null };
+  var listEl = document.getElementById("trace-list");
+  var mainEl = document.getElementById("main");
+
+  // ---- tiny DOM helpers (textContent only for anything data-derived) ----
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = text;
+    return n;
+  }
+
+  function fmtClock(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    if (isNaN(d)) return iso;
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  function fmtDur(ms) {
+    if (ms === null || ms === undefined) return "";
+    if (ms < 1) return ms.toFixed(2) + "ms";
+    if (ms < 1000) return ms.toFixed(1) + "ms";
+    return (ms / 1000).toFixed(2) + "s";
+  }
+
+  function primaryLabel(node) {
+    var p = node.payload || {};
+    if (node.event_type === "llm_call") return p.model || "llm call";
+    if (node.event_type === "tool_call") return p.tool_name || "tool call";
+    if (node.event_type === "retry") return "attempt " + (p.attempt !== undefined ? p.attempt : "?");
+    if (node.event_type === "error") return "error";
+    if (node.event_type === "decision") return p.summary || "decision";
+    return node.event_type;
+  }
+
+  function maxDuration(nodes) {
+    var m = 0;
+    (function walk(list) {
+      list.forEach(function (n) {
+        if (typeof n.duration_ms === "number") m = Math.max(m, n.duration_ms);
+        if (n.children) walk(n.children);
+      });
+    })(nodes);
+    return m;
+  }
+
+  // ---- sidebar ----
+  function renderList() {
+    listEl.textContent = "";
+    if (!state.traces.length) {
+      var e = el("div", "empty");
+      e.appendChild(el("div", "big", "No traces yet"));
+      e.appendChild(el("div", null, "Run an agent, then Refresh."));
+      listEl.appendChild(e);
+      return;
+    }
+    // API returns oldest-first; show newest at the top.
+    state.traces.slice().reverse().forEach(function (t) {
+      var item = el("div", "trace-item" + (t.trace_id === state.selectedId ? " sel" : ""));
+      var row1 = el("div", "row1");
+      row1.appendChild(el("span", "tname", t.name));
+      row1.appendChild(el("span", "grow"));
+      row1.appendChild(el("span", "ttime", fmtClock(t.started_at)));
+      item.appendChild(row1);
+
+      var meta = el("div", "meta");
+      meta.appendChild(el("span", "pill", t.event_count + (t.event_count === 1 ? " event" : " events")));
+      if (t.error_count) meta.appendChild(el("span", "pill err", t.error_count + " errored"));
+      if (t.metadata && t.metadata.provider) meta.appendChild(el("span", "pill", t.metadata.provider));
+      item.appendChild(meta);
+
+      item.addEventListener("click", function () { selectTrace(t.trace_id); });
+      listEl.appendChild(item);
+    });
+  }
+
+  // ---- main / timeline ----
+  function messageState(bigText, lines) {
+    var wrap = el("div", "empty");
+    wrap.appendChild(el("div", "big", bigText));
+    (lines || []).forEach(function (ln) {
+      if (ln.code) {
+        var d = el("div");
+        d.appendChild(el("code", null, ln.code));
+        wrap.appendChild(d);
+      } else {
+        wrap.appendChild(el("div", null, ln));
+      }
+    });
+    return wrap;
+  }
+
+  function renderTrace(trace) {
+    mainEl.textContent = "";
+
+    var head = el("div", "trace-head");
+    head.appendChild(el("h1", null, trace.name));
+    var ended = trace.ended_at ? fmtClock(trace.ended_at) : "in progress";
+    head.appendChild(el("div", "sub", trace.trace_id + "  ·  " + fmtClock(trace.started_at) + " → " + ended));
+    var metarow = el("div", "metarow");
+    Object.keys(trace.metadata || {}).forEach(function (k) {
+      metarow.appendChild(el("span", "pill", k + ": " + trace.metadata[k]));
+    });
+    if (metarow.childNodes.length) head.appendChild(metarow);
+    mainEl.appendChild(head);
+
+    var timeline = el("div", "timeline");
+    var nodes = trace.events || [];
+    if (!nodes.length) {
+      timeline.appendChild(messageState("This trace has no events.", []));
+    } else {
+      var mx = maxDuration(nodes);
+      nodes.forEach(function (n) { timeline.appendChild(renderNode(n, mx)); });
+    }
+    mainEl.appendChild(timeline);
+  }
+
+  function renderNode(node, mx) {
+    var wrap = el("div", "node");
+    var hasChildren = node.children && node.children.length;
+    var hasError = !!node.error;
+
+    var row = el("div", "node-row" + (hasError ? " has-error" : ""));
+
+    var caret = el("span", "caret" + (hasChildren ? "" : " leaf"), "▶");
+    row.appendChild(caret);
+
+    row.appendChild(el("span", "badge " + node.event_type, node.event_type.replace("_", " ")));
+
+    var labelCls = (node.event_type === "tool_call" || node.event_type === "llm_call") ? "label mono" : "label";
+    row.appendChild(el("span", labelCls, primaryLabel(node)));
+
+    if (hasError) {
+      row.appendChild(el("span", "err-flag", node.error));
+    }
+
+    row.appendChild(el("span", "grow"));
+
+    if (typeof node.duration_ms === "number" && mx > 0) {
+      var bw = el("span", "bar-wrap");
+      var bar = el("span", "bar " + (hasError ? "error" : node.event_type));
+      var pct = Math.max(2, Math.round((node.duration_ms / mx) * 100));
+      bar.style.width = pct + "%";
+      bw.appendChild(bar);
+      row.appendChild(bw);
+    }
+    row.appendChild(el("span", "dur", fmtDur(node.duration_ms)));
+
+    wrap.appendChild(row);
+
+    // detail panel (built lazily, toggled)
+    var detail = null;
+    var childBox = null;
+    var open = false;
+    row.addEventListener("click", function () {
+      open = !open;
+      row.classList.toggle("open", open);
+      caret.classList.toggle("rot", open && hasChildren);
+      if (open && !detail) {
+        detail = buildDetail(node);
+        wrap.insertBefore(detail, childBox);
+      }
+      if (detail) detail.style.display = open ? "" : "none";
+    });
+
+    if (hasChildren) {
+      childBox = el("div", "children");
+      node.children.forEach(function (c) { childBox.appendChild(renderNode(c, mx)); });
+      wrap.appendChild(childBox);
+    }
+    return wrap;
+  }
+
+  function addField(parent, label, value) {
+    if (value === undefined || value === null || value === "") return;
+    var f = el("div", "field");
+    f.appendChild(el("div", "field-label", label));
+    var pre = el("pre");
+    pre.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    f.appendChild(pre);
+    parent.appendChild(f);
+  }
+
+  function buildDetail(node) {
+    var box = el("div", "detail");
+    var p = node.payload || {};
+
+    // headline facts as a definition list
+    var dl = el("dl");
+    function kv(k, v) {
+      if (v === undefined || v === null || v === "") return;
+      dl.appendChild(el("dt", null, k));
+      dl.appendChild(el("dd", null, String(v)));
+    }
+    kv("started", node.timestamp ? new Date(node.timestamp).toLocaleString() : "");
+    kv("duration", fmtDur(node.duration_ms));
+    if (node.event_type === "llm_call") {
+      kv("model", p.model);
+      if (p.prompt_tokens || p.completion_tokens) {
+        kv("tokens", (p.prompt_tokens || 0) + " prompt / " + (p.completion_tokens || 0) + " completion");
+      }
+    }
+    if (node.event_type === "tool_call") kv("tool", p.tool_name);
+    if (node.event_type === "retry") { kv("attempt", p.attempt); kv("reason", p.reason); }
+    if (dl.childNodes.length) box.appendChild(dl);
+
+    // longer text fields as their own blocks
+    if (node.event_type === "llm_call") {
+      addField(box, "prompt", p.prompt);
+      addField(box, "response", p.response);
+    }
+    if (node.event_type === "tool_call") {
+      addField(box, "arguments", p.args);
+      addField(box, "result", p.result);
+    }
+
+    if (node.error) {
+      var f = el("div", "field");
+      f.appendChild(el("div", "field-label", "error"));
+      var pre = el("pre", "err");
+      pre.textContent = node.error;
+      f.appendChild(pre);
+      box.appendChild(f);
+    }
+
+    if (!box.childNodes.length) box.appendChild(el("div", null, "No further detail."));
+    return box;
+  }
+
+  // ---- data ----
+  function selectTrace(id) {
+    state.selectedId = id;
+    renderList();
+    mainEl.textContent = "";
+    mainEl.appendChild(messageState("Loading…", []));
+    fetch("/api/traces/" + encodeURIComponent(id) + "/tree")
+      .then(function (r) {
+        if (!r.ok) throw new Error("trace not found (" + r.status + ")");
+        return r.json();
+      })
+      .then(renderTrace)
+      .catch(function (err) {
+        mainEl.textContent = "";
+        mainEl.appendChild(messageState("Couldn't load trace", [String(err.message || err)]));
+      });
+  }
+
+  function loadTraces() {
+    listEl.textContent = "";
+    listEl.appendChild(el("div", "aside-head", "loading…"));
+    return fetch("/api/traces")
+      .then(function (r) {
+        if (!r.ok) throw new Error("server returned " + r.status);
+        return r.json();
+      })
+      .then(function (traces) {
+        state.traces = traces;
+        renderList();
+        if (!traces.length) {
+          mainEl.textContent = "";
+          mainEl.appendChild(messageState("No traces in this database", [
+            "Record a run, then Refresh:",
+            { code: "python examples/openai_agent.py" }
+          ]));
+          return;
+        }
+        // Keep the current selection if it still exists, else newest.
+        var stillThere = traces.some(function (t) { return t.trace_id === state.selectedId; });
+        selectTrace(stillThere ? state.selectedId : traces[traces.length - 1].trace_id);
+      })
+      .catch(function (err) {
+        listEl.textContent = "";
+        mainEl.textContent = "";
+        mainEl.appendChild(messageState("Couldn't reach the API", [String(err.message || err)]));
+      });
+  }
+
+  // ---- theme toggle (persisted) ----
+  function applyTheme(t) {
+    if (t) document.documentElement.setAttribute("data-theme", t);
+    else document.documentElement.removeAttribute("data-theme");
+  }
+  var savedTheme = null;
+  try { savedTheme = localStorage.getItem("neurotrace-theme"); } catch (e) {}
+  if (savedTheme) applyTheme(savedTheme);
+  document.getElementById("theme").addEventListener("click", function () {
+    var current = document.documentElement.getAttribute("data-theme");
+    var dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    // cycle: default -> opposite of system, then flip
+    var next = current === "light" ? "dark" : current === "dark" ? "light" : (dark ? "light" : "dark");
+    applyTheme(next);
+    try { localStorage.setItem("neurotrace-theme", next); } catch (e) {}
+  });
+
+  document.getElementById("refresh").addEventListener("click", loadTraces);
+  loadTraces();
+})();
+</script>
+</body>
+</html>

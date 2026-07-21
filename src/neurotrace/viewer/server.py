@@ -1,13 +1,14 @@
-"""Read-only JSON API over a trace database.
+"""Read-only JSON API and browser viewer over a trace database.
 
-`create_app(db_path)` serves the traces in one SQLite file: summaries for a
-list view, one trace flat as stored, and one trace nested as rendered. Day 6's
-timeline UI is the intended consumer — this is the seam between "we have the
-data" and "you can look at it," and it exists as its own layer so the UI is a
-static asset talking HTTP rather than Python generating markup.
+`create_app(db_path)` serves the traces in one SQLite file: the `/api`
+endpoints hand back summaries for a list view, one trace flat as stored, and
+one trace nested as rendered; `GET /` serves the timeline UI that consumes
+them. The API is the seam between "we have the data" and "you can look at it,"
+and it stays its own layer so the UI is a static asset talking HTTP rather
+than Python generating markup.
 
-Nothing here mutates a trace. The API is a viewer for runs that already
-happened; writes belong to `Tracer`, in the process being traced.
+Nothing here mutates a trace. Both the API and the page are viewers for runs
+that already happened; writes belong to `Tracer`, in the process being traced.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 
 from neurotrace.core.storage import SQLiteStorage
 from neurotrace.viewer.render import render_trace
@@ -28,6 +30,10 @@ from neurotrace.viewer.tree import build_tree
 # operator makes explicitly, with `--host`.
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8756
+
+# The single-file timeline UI, shipped alongside this module (so it's present
+# in a wheel too, not just a source checkout).
+_UI_FILE = Path(__file__).parent / "static" / "index.html"
 
 
 def create_app(db_path: str | Path) -> FastAPI:
@@ -45,6 +51,13 @@ def create_app(db_path: str | Path) -> FastAPI:
         title="NeuroTrace",
         description="Read-only API over a NeuroTrace trace database.",
     )
+
+    @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+    def index() -> str:
+        """The timeline UI. Served from this same app (no CORS needed) and
+        read per request so editing the page during development doesn't need a
+        restart — it's a local file read, not a network hop."""
+        return _UI_FILE.read_text(encoding="utf-8")
 
     @contextmanager
     def storage() -> Iterator[SQLiteStorage]:
