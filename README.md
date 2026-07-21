@@ -67,6 +67,8 @@ for the timeline: a list of runs on the left, and on the right an expandable
 tree where each span shows its duration as a bar and clicks open the full
 prompt/response or tool arguments/result. Errors are highlighted.
 
+![The NeuroTrace browser timeline: a run list on the left and the selected run's nested event tree on the right, with a highlighted tool-call error](docs/screenshots/viewer-timeline.png)
+
 ```console
 $ neurotrace serve traces.db
 serving traces.db  (ctrl-c to stop)
@@ -75,10 +77,16 @@ serving traces.db  (ctrl-c to stop)
   docs:    http://127.0.0.1:8756/docs
 ```
 
+Click any span to expand it — an LLM call shows its model, token counts, and
+the full prompt and response:
+
+![An expanded LLM call showing model, token counts, prompt, and response](docs/screenshots/viewer-llm-detail.png)
+
 The page is a single self-contained HTML file with no external requests and
 no build step — a trace holds your prompts and tool data verbatim, so the
 viewer keeps all of it on your machine, and renders trace content as text
-rather than markup.
+rather than markup. More views (the error detail and the light theme) are in
+[`docs/screenshots/`](docs/screenshots/).
 
 ## HTTP API
 
