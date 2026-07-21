@@ -17,6 +17,9 @@
   below is HTML; every dynamic value goes in through the DOM text API.
 -->
 <style>
+  /* Dark is the baseline (:root). A light-OS visitor who hasn't picked a
+     theme gets the light palette via the media block below; an explicit
+     choice (data-theme) always overrides the OS. */
   :root {
     color-scheme: dark;
     --bg: #0d1117;
@@ -66,6 +69,38 @@
     --retry-bg: rgba(154, 103, 0, 0.10);
     --decision: #57606a;
     --decision-bg: rgba(87, 96, 106, 0.10);
+  }
+
+  /* OS default when no explicit theme is set. Values mirror the
+     [data-theme="light"] block above — keep the two in sync. The :not()
+     gate is what lets an explicit dark toggle still win on a light-OS
+     machine, and because it's a media query the page also follows a live
+     OS light/dark switch until the visitor picks a theme themselves. */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+      color-scheme: light;
+      --bg: #ffffff;
+      --panel: #f6f8fa;
+      --panel-2: #eef1f4;
+      --border: #d0d7de;
+      --border-soft: #e4e8ec;
+      --text: #1f2328;
+      --muted: #656d76;
+      --faint: #818b98;
+      --guide: #d8dee4;
+      --sel: #0969da;
+      --sel-bg: rgba(9, 105, 218, 0.09);
+      --llm: #4b57c9;
+      --llm-bg: rgba(75, 87, 201, 0.10);
+      --tool: #147d5f;
+      --tool-bg: rgba(20, 125, 95, 0.10);
+      --error: #cf222e;
+      --error-bg: rgba(207, 34, 46, 0.09);
+      --retry: #9a6700;
+      --retry-bg: rgba(154, 103, 0, 0.10);
+      --decision: #57606a;
+      --decision-bg: rgba(87, 96, 106, 0.10);
+    }
   }
 
   * { box-sizing: border-box; }

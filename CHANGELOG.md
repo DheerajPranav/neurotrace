@@ -4,6 +4,15 @@ All notable changes to NeuroTrace are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The browser viewer now follows the operating system's light/dark preference
+  by default (via `prefers-color-scheme`) instead of always starting dark. An
+  explicit choice from the header theme toggle still overrides the OS and
+  persists across reloads.
+
 ## [0.1.0] — 2026-07-21
 
 First tagged release: capture an agent run, store it, and inspect it as a
