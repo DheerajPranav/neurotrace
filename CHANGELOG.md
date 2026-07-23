@@ -6,6 +6,21 @@ aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- CI on every push/PR (`.github/workflows/ci.yml`): `ruff check` + the full
+  test suite across Python 3.10-3.13. Previously enforced by hand only.
+- An optional `redact` hook on `Tracer`, applied to a copy of each event
+  just before it's handed to storage; default (no hook) behavior is
+  unchanged and still verbatim. Ships a best-effort built-in,
+  `redact_secrets`, masking common secret shapes and sensitive key names.
+  See README's "Data handling" section.
+- `create(stream=True)` is now fully traced: the assembled response
+  content, time-to-first-chunk, and total duration are all captured, where
+  previously the span recorded an empty response (see `examples/streaming_agent.py`).
+  Tool-call deltas inside a stream are not assembled yet — only text
+  content and usage.
+
 ### Fixed
 
 - The browser viewer now follows the operating system's light/dark preference

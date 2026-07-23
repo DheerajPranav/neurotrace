@@ -75,6 +75,7 @@ def llm_call_event(
     completion_tokens: int = 0,
     duration_ms: float | None = None,
     parent_id: str | None = None,
+    time_to_first_chunk_ms: float | None = None,
 ) -> Event:
     return Event(
         trace_id=trace_id,
@@ -85,6 +86,9 @@ def llm_call_event(
             "response": response,
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
+            # None for a non-streamed call -- there is no meaningful
+            # "first chunk" when the whole response arrives at once.
+            "time_to_first_chunk_ms": time_to_first_chunk_ms,
         },
         duration_ms=duration_ms,
         parent_id=parent_id,

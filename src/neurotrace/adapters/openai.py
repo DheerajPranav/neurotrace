@@ -17,7 +17,8 @@ from __future__ import annotations
 
 import inspect
 import json
-from typing import Any, Callable
+import time
+from typing import Any, Callable, Iterator
 
 from neurotrace.core.tracer import Tracer
 
@@ -61,6 +62,22 @@ def _format_messages(messages: Any) -> str:
             content = _describe_tool_calls(_get(message, "tool_calls"))
         lines.append(f"{role}: {content}")
     return "\n".join(lines)
+
+
+def _stream_delta_text(chunk: Any) -> str:
+    """The incremental content a single streamed chunk adds, or "".
+
+    Reads the same wire shape as a full response, one level deeper:
+    `choices[0].delta.content` instead of `choices[0].message.content`.
+    Tool-call deltas are not assembled here -- see `_traced_stream`'s
+    docstring for why that's out of scope for now.
+    """
+    choices = _get(chunk, "choices") or []
+    if not choices:
+        return ""
+    delta = _get(choices[0], "delta")
+    content = _get(delta, "content")
+    return content or ""
 
 
 def _first_message(response: Any) -> Any:
@@ -219,6 +236,71 @@ def dispatch_tool_calls(
     return results
 
 
+def _traced_stream(tracer: Tracer, raw_stream: Any, **span_kwargs: Any) -> Iterator[Any]:
+    """Wrap a `create(stream=True)` iterator so it closes its own llm_call span.
+
+    `create()` returns immediately with a generator the caller iterates in
+    their own time, so the span can't be a `with tracer.llm_call(...): ...`
+    block the way a normal completion is -- that block would close (and
+    save an empty response) before the caller ever pulls a chunk. Instead
+    the span is entered here and manually exited once the caller finishes
+    iterating, however that happens: full exhaustion, an exception raised
+    partway through, or the caller simply walking away and letting this
+    generator get garbage-collected (which throws `GeneratorExit` in at
+    the suspended `yield`). All three paths close the span exactly once via
+    `_finish`, so a span can never leak.
+
+    Every chunk is re-yielded unchanged and untouched before this function
+    looks at it -- the caller's chunk-by-chunk consumption sees exactly
+    what the real client produced.
+
+    Tool-call deltas are not assembled into a payload here: OpenAI streams
+    a tool call's arguments as fragments of JSON text spread across many
+    chunks, and reassembling that correctly (matching fragments to the
+    right `tool_calls[i]` by index, handling more than one tool call in
+    flight at once) is real complexity with no test coverage yet. Scoped
+    out of this pass; only assembled text content and usage are captured.
+    """
+    cm = tracer.llm_call(**span_kwargs)
+    span = cm.__enter__()
+
+    chunks_text: list[str] = []
+    start = time.perf_counter()
+    time_to_first_chunk_ms: float | None = None
+    finished = False
+
+    def _finish(exc_type: Any = None, exc: Any = None, tb: Any = None) -> None:
+        nonlocal finished
+        if finished:
+            return
+        finished = True
+        span.response = "".join(chunks_text)
+        span.time_to_first_chunk_ms = time_to_first_chunk_ms
+        cm.__exit__(exc_type, exc, tb)
+
+    try:
+        for chunk in raw_stream:
+            if time_to_first_chunk_ms is None:
+                time_to_first_chunk_ms = (time.perf_counter() - start) * 1000
+            delta_text = _stream_delta_text(chunk)
+            if delta_text:
+                chunks_text.append(delta_text)
+            usage = _get(chunk, "usage")
+            if usage is not None:
+                span.prompt_tokens = _get(usage, "prompt_tokens", 0) or 0
+                span.completion_tokens = _get(usage, "completion_tokens", 0) or 0
+            yield chunk
+    except Exception as exc:
+        _finish(type(exc), exc, exc.__traceback__)
+        raise
+    finally:
+        # Covers both normal exhaustion and the caller abandoning the
+        # generator early (GeneratorExit, not an Exception subclass, skips
+        # the `except` above) -- `_finish`'s own guard makes the exception
+        # path's explicit call and this one idempotent together.
+        _finish()
+
+
 class _TracedCompletions:
     def __init__(self, completions: Any, client: "TracedOpenAI") -> None:
         self._completions = completions
@@ -226,10 +308,27 @@ class _TracedCompletions:
 
     def create(self, **kwargs: Any) -> Any:
         tracer = self._client.tracer
-        with tracer.llm_call(
+        span_kwargs = dict(
             model=kwargs.get("model", "unknown"),
             prompt=_format_messages(kwargs.get("messages")),
-        ) as span:
+        )
+
+        # The schemas sent with the request are what the model was offered,
+        # so they're the right bound to check its tool calls against --
+        # recorded up front since a streamed response has no single point
+        # where "the call just happened" the way a non-streamed one does.
+        self._client.last_tool_schemas = kwargs.get("tools")
+
+        if kwargs.get("stream"):
+            raw_stream = self._completions.create(**kwargs)
+            # There's no span.event_id to hand out yet -- the span doesn't
+            # open until the caller starts iterating (see _traced_stream).
+            # Tool calls in a streamed response aren't assembled at all yet
+            # (same scope note as _traced_stream), so last_llm_event_id
+            # being stale here doesn't yet matter in practice.
+            return _traced_stream(tracer, raw_stream, **span_kwargs)
+
+        with tracer.llm_call(**span_kwargs) as span:
             response = self._completions.create(**kwargs)
             span.response = _response_text(_first_message(response))
 
@@ -241,9 +340,6 @@ class _TracedCompletions:
             # Recorded so tool calls this response requests can nest under it
             # once the caller dispatches them, after this span has closed.
             self._client.last_llm_event_id = span.event_id
-            # The schemas sent with the request are what the model was offered,
-            # so they're the right bound to check its tool calls against.
-            self._client.last_tool_schemas = kwargs.get("tools")
             return response
 
     def __getattr__(self, name: str) -> Any:

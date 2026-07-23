@@ -15,12 +15,13 @@ streaming is the known-broken path per `CHANGELOG.md`.
 |---|---|---|
 | M1 | CI/CD gate | **done** — pushed as `6668a21`, `gh run list` confirms `completed success` on the matrix run |
 | M2 | Redaction hook | **done** |
-| M3 | Streaming traced | in progress |
-| M4 | Storage failure isolation | not started (scope note below) |
+| M3 | Streaming traced | **done** |
+| M4 | Storage failure isolation | in progress (scope note below) |
 
 ## Next action
 
-M3: trace `create(stream=True)` fully in the OpenAI adapter.
+M4: guard `Tracer.__exit__` against both `self._redact(e)` and
+`self.storage.save_trace(...)` raising, plus idempotent double-instrumentation.
 
 **Note for M4:** while verifying M2, found that a user-supplied `redact`
 callable raising inside `Tracer.__exit__` would currently propagate and
@@ -74,3 +75,33 @@ twice: M4's fix should guard *both* `self._redact(e)` and
   regression, in-process-trace-untouched, and redaction still applying on
   the partial-trace-after-exception path. Full suite: 67 passed (58 + 9),
   lint clean. Freeze boundary held — no viewer/API files touched.
+
+- 2026-07-23 — M3 BUILD: added `_traced_stream` to `adapters/openai.py` —
+  `create(stream=True)` now returns a generator that re-yields every chunk
+  untouched while assembling the full response text and usage in the
+  background, and manually opens/closes the underlying `llm_call` span
+  (can't use the `with` block a non-streamed call uses, since `create()`
+  has to return before the caller ever pulls a chunk). The close is
+  guarded to run exactly once across three different ways a stream can
+  end: full exhaustion, an exception raised mid-stream (recorded as the
+  span's error, then re-raised), or the caller abandoning the generator
+  early (`GeneratorExit` — not an `Exception` subclass, so it needed its
+  own path; treated as a normal close with whatever partial content had
+  arrived, not an error, since walking away isn't the call failing).
+  Added an optional `time_to_first_chunk_ms` payload field to
+  `llm_call_event`/`LLMCallHandle` (`core/events.py`, `core/tracer.py`) —
+  **judgment call, flagged rather than silent:** this touches core/, which
+  M3's freeze boundary in `PLAN.md` said not to; read the boundary's intent
+  as "don't add a new span type / alter open-close-parent mechanics," which
+  this doesn't — it's one additive, default-`None` field. Verified it's
+  genuinely additive: existing tests still pass unmodified, no payload
+  key was removed or renamed. Explicitly out of scope (documented in
+  `_traced_stream`'s docstring): tool-call deltas within a stream are not
+  assembled — OpenAI spreads a tool call's JSON arguments across many
+  chunks keyed by index, and that reassembly has no test coverage yet.
+  Added `examples/streaming_agent.py`, ran the exact PLAN.md demo command
+  and confirmed via direct DB read (not just the CLI summary line) that
+  response text, tokens, `time_to_first_chunk_ms`, and `duration_ms` are
+  all populated. Updated CHANGELOG's `[Unreleased]` section and README's
+  "Status" line (previously stated streaming as a known gap — no longer
+  true). Full suite: 72 passed (67 + 5), lint clean.

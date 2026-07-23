@@ -39,6 +39,7 @@ class LLMCallHandle:
     prompt_tokens: int = 0
     response: str = ""
     completion_tokens: int = 0
+    time_to_first_chunk_ms: float | None = None
 
 
 @dataclass
@@ -122,6 +123,7 @@ class Tracer:
                 completion_tokens=handle.completion_tokens,
                 duration_ms=duration_ms,
                 parent_id=parent_id,
+                time_to_first_chunk_ms=handle.time_to_first_chunk_ms,
             )
             event.event_id = event_id
             event.error = error

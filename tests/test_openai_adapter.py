@@ -294,3 +294,104 @@ def test_multi_turn_loop_nests_each_turn_under_its_own_completion():
     first_llm, tool_event, second_llm = tracer.trace.events
     assert tool_event.parent_id == first_llm.event_id
     assert second_llm.parent_id is None, "a new turn is a root, not a child of the last one"
+
+
+# --- streaming ----------------------------------------------------------------
+# create(stream=True) returns an iterator of chunks instead of one response.
+# Chunks below use the same delta-shaped wire format as a real OpenAI stream:
+# choices[0].delta.content, with usage arriving on a final chunk with no
+# choices at all (matches the `stream_options={"include_usage": True}` shape).
+
+
+class FakeDelta:
+    def __init__(self, content=None):
+        self.content = content
+
+
+class FakeStreamChoice:
+    def __init__(self, delta):
+        self.delta = delta
+
+
+class FakeChunk:
+    def __init__(self, content=None, usage=None):
+        self.choices = [FakeStreamChoice(FakeDelta(content))] if content is not None else []
+        self.usage = usage
+
+
+def test_non_streaming_call_has_no_time_to_first_chunk():
+    response = FakeResponse(FakeMessage(content="hello"))
+    tracer = Tracer(name="run")
+    client = trace_openai(FakeClient([response]), tracer)
+
+    with tracer:
+        client.chat.completions.create(model="gpt-4o", messages=[])
+
+    (event,) = tracer.trace.events
+    assert event.payload["time_to_first_chunk_ms"] is None
+
+
+def test_streaming_passes_chunks_through_untouched_and_assembles_response():
+    chunks = [FakeChunk("Hello"), FakeChunk(" there"), FakeChunk(None, usage=FakeUsage(9, 3))]
+    tracer = Tracer(name="run")
+    client = trace_openai(FakeClient([chunks]), tracer)
+
+    with tracer:
+        stream = client.chat.completions.create(model="gpt-4o", messages=[], stream=True)
+        received = list(stream)
+
+    assert received == chunks, "the caller must see exactly what the real client produced"
+
+    (event,) = tracer.trace.events
+    assert event.event_type == EventType.LLM_CALL
+    assert event.payload["response"] == "Hello there"
+    assert event.payload["prompt_tokens"] == 9
+    assert event.payload["completion_tokens"] == 3
+    assert event.payload["time_to_first_chunk_ms"] is not None
+    assert event.duration_ms is not None
+
+
+def test_streaming_span_is_not_recorded_until_the_caller_iterates():
+    chunks = [FakeChunk("hi")]
+    tracer = Tracer(name="run")
+    client = trace_openai(FakeClient([chunks]), tracer)
+
+    with tracer:
+        stream = client.chat.completions.create(model="gpt-4o", messages=[], stream=True)
+        assert tracer.trace.events == [], "create() must not close the span before iteration"
+        list(stream)
+
+    assert len(tracer.trace.events) == 1
+
+
+def test_streaming_abandoned_early_still_closes_the_span_with_partial_content():
+    chunks = [FakeChunk("a"), FakeChunk("b"), FakeChunk("c")]
+    tracer = Tracer(name="run")
+    client = trace_openai(FakeClient([chunks]), tracer)
+
+    with tracer:
+        stream = client.chat.completions.create(model="gpt-4o", messages=[], stream=True)
+        next(stream)
+        stream.close()  # caller walks away mid-stream -- GeneratorExit, not an Exception
+
+    (event,) = tracer.trace.events
+    assert event.payload["response"] == "a"
+    assert event.error is None, "the caller stopping early is not the call failing"
+
+
+def test_streaming_exception_partway_through_is_recorded_and_reraised():
+    def broken_stream():
+        yield FakeChunk("partial")
+        raise ConnectionError("dropped")
+
+    tracer = Tracer(name="run")
+    client = trace_openai(FakeClient([broken_stream()]), tracer)
+
+    with pytest.raises(ConnectionError):
+        with tracer:
+            stream = client.chat.completions.create(model="gpt-4o", messages=[], stream=True)
+            list(stream)
+
+    (event,) = tracer.trace.events
+    assert event.payload["response"] == "partial"
+    assert event.error == "dropped"
