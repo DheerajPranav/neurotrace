@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>neurotrace — Definition of Done</title>
+<style>
+  body { font-family: -apple-system, sans-serif; max-width: 780px; margin: 2rem auto; line-height: 1.5; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; }
+  h2 { font-size: 1.1rem; border-bottom: 1px solid #ccc; padding-bottom: .25rem; margin-top: 2rem; }
+  .locked { background: #fff3cd; border: 1px solid #e0c060; padding: .5rem .75rem; font-size: .9rem; margin-bottom: 1.5rem; }
+  .gate { margin: .75rem 0; padding: .5rem .75rem; border-left: 3px solid #999; }
+  .gate.milestone { border-left-color: #4a7; }
+  code { background: #f2f2f2; padding: .1rem .3rem; border-radius: 3px; }
+  ul { margin: .25rem 0; }
+</style>
+</head>
+<body>
+
+<h1>neurotrace — Definition of Done</h1>
+<div class="locked">
+  <strong>Locked.</strong> This file is not edited mid-loop. Scope changes go through the user, not
+  silently. Every gate below must be checked by a context/agent that did <em>not</em> write the
+  change (L4 VERIFY is always separate from the maker).
+</div>
+
+<h2>§1 — Cognitive job (Phase 0)</h2>
+<p>Written per the agentic-swe-master 5-question diagnostic, run against neurotrace as it exists
+today (v0.1.0, existing system being extended, not greenfield).</p>
+<ul>
+  <li><strong>Scope:</strong> existing system being extended (not new, not an incident).</li>
+  <li><strong>AI components:</strong> none directly — neurotrace makes no LLM calls itself. It
+    instruments code that does. Its own "reasoning" is zero: capture, store, render. No autonomy.</li>
+  <li><strong>Distribution:</strong> none — single process, local SQLite file, loopback-bound HTTP
+    server. Not a distributed system.</li>
+  <li><strong>Trust boundary:</strong> yes, and it's the sharpest edge in the project — traces store
+    prompts/tool-args/results verbatim and unencrypted by design. The boundary is "this machine"
+    (trusted) vs. "network / anyone reading the .db" (untrusted).</li>
+  <li><strong>Cognitive job, stated:</strong> capture whatever an agent's LLM/tool calls produce,
+    exactly as produced, without altering or short-circuiting the agent loop being observed; persist
+    it; make it inspectable after the fact via CLI, JSON API, and browser UI. Human involvement is
+    total — a person reads the trace; neurotrace never acts on what it captures.</li>
+  <li><strong>Failure tolerance:</strong> the observer must never break the observed. A tracer or
+    storage failure must degrade (partial trace, a warning) — it must not raise into the host
+    agent's control flow.</li>
+</ul>
+
+<h2>§2 — Phase gates touched by this plan</h2>
+<p>Copied from <code>agentic-swe-master</code>'s gate lines for the phases that actually apply (see
+<code>wiki/index.md</code> for why each does or doesn't). Only phases with in-scope work below.</p>
+
+<div class="gate">
+  <strong>Phase 10 — Observability &amp; Tracing.</strong>
+  Gate: every agent span captures latency + token count + tool result + cost. Alerts on p99 latency,
+  error rate, cost drift. Prompt traces searchable.<br>
+  <em>Applicability here:</em> latency/token/tool-result capture already holds for non-streaming LLM
+  calls (pre-existing). Streaming spans do not meet this gate yet (M3). Cost-in-dollars and alerting
+  are out of scope — no live system to alert on.
+</div>
+
+<div class="gate">
+  <strong>Phase 11 — Security Architecture.</strong>
+  Gate: threat model exists with specific adversary categories. Prompt injection mitigated with
+  instruction hierarchy and sanitization. RBAC implemented. Audit trails append-only, tamper-evident.<br>
+  <em>Applicability here:</em> no RBAC/audit-trail requirement (single-user local tool). The relevant
+  slice: sensitive data written verbatim by design, with no way to opt out today. M2 closes the "no
+  way to opt out" gap. Full threat-model doc is out of scope for this pass — the invariant in
+  <code>context-graph.json</code> stands in for it.
+</div>
+
+<div class="gate">
+  <strong>Phase 12 — Reliability Engineering.</strong>
+  Gate: every outbound call has circuit breaker + timeout + retry with idempotency. Checkpointing
+  allows resumption after crash. No operation has side effects on retry it didn't have on first
+  execution.<br>
+  <em>Applicability here:</em> "outbound call" here means the SQLite write, not a network call.
+  Partial-trace-on-exception already holds for tracer-level failures; M4 extends it to
+  storage-level failures and makes re-instrumenting a client idempotent.
+</div>
+
+<div class="gate">
+  <strong>Phase 18 — CI/CD for AI Systems.</strong>
+  Gate: no change deploys without passing eval gates.<br>
+  <em>Applicability here:</em> "eval gate" = the existing 58-test pytest suite + lint. Currently
+  there is no automated gate at all (M1). No shadow/canary deploy concept applies to a pip package.
+</div>
+
+<h2>§3 — Milestone mirror (see <code>PLAN.md</code> for full detail)</h2>
+
+<div class="gate milestone">
+  <strong>M1 — CI/CD gate.</strong> Done when: <code>.github/workflows/ci.yml</code> exists, runs
+  <code>ruff check</code> + <code>pytest</code> on push/PR, and a verifier confirms it actually ran
+  green on the current branch (not just that the file exists).
+</div>
+
+<div class="gate milestone">
+  <strong>M2 — Redaction hook.</strong> Done when: <code>tests/test_redaction.py</code> passes,
+  default (no hook supplied) behavior is provably unchanged (existing storage tests still pass
+  unmodified), and README's "Data handling" section is updated to describe the opt-in hook instead
+  of only describing the gap.
+</div>
+
+<div class="gate milestone">
+  <strong>M3 — Streaming traced.</strong> Done when: a streamed completion produces a span with
+  non-empty assembled content, a recorded time-to-first-chunk, and a recorded total duration; the
+  caller's chunk iteration is unaffected (existing streaming behavior, if any caller depends on it,
+  does not regress); <code>examples/streaming_agent.py</code> demonstrates it end to end without an
+  API key.
+</div>
+
+<div class="gate milestone">
+  <strong>M4 — Storage failure isolation.</strong> Done when:
+  <code>tests/test_tracer_reliability.py</code> proves a raising storage backend does not propagate
+  into the traced code, a warning is emitted (not silently swallowed), and calling
+  <code>trace_openai</code> twice on the same client does not double-record spans.
+</div>
+
+<h2>Verification rule</h2>
+<p>A milestone is not "done" because the maker's own tests pass. It is done when a separate
+verification pass (different context, ideally a different model) re-runs the demo command from
+<code>PLAN.md</code> from a clean checkout and confirms the gate text above, independent of the
+maker's summary of what it did.</p>
+
+</body>
+</html>

@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "httpx2"]  # httpx2 backs starlette's TestClient
+dev = ["pytest>=8.0", "httpx2", "ruff>=0.6"]  # httpx2 backs starlette's TestClient
 
 [project.urls]
 Repository = "https://github.com/DheerajPranav/neurotrace"

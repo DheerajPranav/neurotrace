@@ -1,0 +1,40 @@
+{
+  "repo": "neurotrace",
+  "generated": "2026-07-23",
+  "generated_by": "manual (genesis scaffold.sh/graphizer.mjs not present in this install)",
+  "nodes": [
+    { "id": "core/events.py",      "role": "schema",   "loc_est": 90,  "deps": [] },
+    { "id": "core/storage.py",     "role": "io",        "deps": ["core/events.py"] },
+    { "id": "core/tracer.py",      "role": "runtime",   "deps": ["core/events.py", "core/storage.py"] },
+    { "id": "adapters/openai.py",  "role": "adapter",   "deps": ["core/tracer.py"] },
+    { "id": "viewer/tree.py",      "role": "view-logic","deps": ["core/events.py"] },
+    { "id": "viewer/render.py",    "role": "view-logic","deps": ["core/events.py", "viewer/tree.py"] },
+    { "id": "viewer/server.py",    "role": "io",        "deps": ["core/storage.py", "viewer/render.py", "viewer/tree.py"] },
+    { "id": "cli.py",              "role": "entrypoint","deps": ["core/storage.py", "viewer/render.py", "viewer/server.py"] }
+  ],
+  "notes": [
+    "Dependency graph is a DAG rooted at core/events.py — no cycles observed as of this scaffold.",
+    "adapters/ currently has one member (openai.py); README's project layout comment implies more (LangChain) are expected, not yet written.",
+    "viewer/static/index.html (browser UI) is not a Python module and is served as a static asset by viewer/server.py — not graphed as a node."
+  ],
+  "invariants": [
+    {
+      "id": "no-crash-propagation",
+      "statement": "A failure inside Tracer or a Storage backend must never propagate into the traced agent's own control flow. Tracer already catches and saves a partial trace on exception (core/tracer.py); any new instrumentation path (adapters, new backends) must preserve this — the thing being observed must survive the observer breaking.",
+      "enforced_by": ["tests/test_tracer.py::test_tracer_saves_partial_trace_on_exception"],
+      "status": "held for core+openai adapter; not yet verified for hypothetical future adapters or storage backends"
+    },
+    {
+      "id": "trace-data-is-unencrypted-by-design",
+      "statement": "Traces store prompts, tool arguments, and tool results verbatim and unencrypted (core/storage.py, adapters/openai.py) because redaction would defeat the tool's purpose of showing exactly what happened. This is a deliberate trust-boundary decision, not an oversight — but it means any code path that could expose a .db file over the network (viewer/server.py) or widen what gets written must treat that as a security-relevant change, not a routine one.",
+      "enforced_by": ["viewer/server.py binds 127.0.0.1 by default", "tests/test_server.py"],
+      "status": "held, but no redaction hook exists yet (tracked as CHANGELOG known limitation) — this is the sharpest edge in the project"
+    },
+    {
+      "id": "adapter-reads-structurally-not-by-type",
+      "statement": "adapters/openai.py never imports the `openai` package and reads responses structurally (dict-like access), which is why it also drives xAI/Groq/Ollama over the same wire format. Any new adapter code must preserve this — importing a provider SDK directly for type-checking would silently break provider portability.",
+      "enforced_by": ["tests/test_openai_adapter.py"],
+      "status": "held"
+    }
+  ]
+}

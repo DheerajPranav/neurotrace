@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from neurotrace.core.events import Trace, llm_call_event, tool_call_event
+from neurotrace.core.events import Trace, tool_call_event
 from neurotrace.core.storage import SQLiteStorage
 from neurotrace.core.tracer import Tracer
 from neurotrace.viewer.server import _UI_FILE, create_app
