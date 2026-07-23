@@ -16,12 +16,13 @@ streaming is the known-broken path per `CHANGELOG.md`.
 | M1 | CI/CD gate | **done** — pushed as `6668a21`, `gh run list` confirms `completed success` on the matrix run |
 | M2 | Redaction hook | **done** |
 | M3 | Streaming traced | **done** |
-| M4 | Storage failure isolation | in progress (scope note below) |
+| M4 | Storage failure isolation | **done** |
 
 ## Next action
 
-M4: guard `Tracer.__exit__` against both `self._redact(e)` and
-`self.storage.save_trace(...)` raising, plus idempotent double-instrumentation.
+All 4 planned milestones are done and pushed. Not-in-plan follow-ups noted
+in `PLAN.md` ("Explicitly not in this plan"): an Anthropic-native adapter,
+trace search/filter/replay in the viewer. No open thread otherwise.
 
 **Note for M4:** while verifying M2, found that a user-supplied `redact`
 callable raising inside `Tracer.__exit__` would currently propagate and
@@ -105,3 +106,18 @@ twice: M4's fix should guard *both* `self._redact(e)` and
   all populated. Updated CHANGELOG's `[Unreleased]` section and README's
   "Status" line (previously stated streaming as a known gap — no longer
   true). Full suite: 72 passed (67 + 5), lint clean.
+
+- 2026-07-23 — M4 BUILD: wrapped the redact-and-save block in
+  `Tracer.__exit__` in a single `try/except Exception`, emitting a
+  `RuntimeWarning` (not swallowing silently) on failure — covers both the
+  M2 gap noted above (a broken `redact` callable) and storage-level
+  failures (`SQLiteStorage.save_trace` raising on a full disk or locked
+  file) with one fix, as planned. Added `trace_openai`'s idempotency
+  guard: wrapping an already-`TracedOpenAI` client returns it unchanged
+  rather than nesting instrumentation and recording two spans per real
+  call. `tests/test_tracer_reliability.py` (6 tests) — the sharpest one
+  proves the *original* exception from the traced code still propagates
+  even when storage *also* fails during the same `__exit__`, i.e. the
+  tracer's own failure never masks the real one. Freeze boundary held:
+  `core/storage.py` (the SQLite schema) has zero diff. Full suite: 78
+  passed (72 + 6), lint clean. All 4 planned milestones now done.

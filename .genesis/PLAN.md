@@ -29,7 +29,7 @@ milestone rather than fixing inline — this milestone is infra-only.
 
 **Skills:** `production-readiness`, `llmops-ai-agents` (Phase 18 gate)
 
-**Status:** not started
+**Status:** done
 
 ---
 
@@ -53,7 +53,7 @@ downstream needs to change.
 
 **Skills:** `security-engineering` (Phase 11 gate)
 
-**Status:** not started
+**Status:** done
 
 ---
 
@@ -78,7 +78,7 @@ not a new span type.
 
 **Skills:** `llmops-ai-agents`, `production-readiness` (Phase 10/12 gates)
 
-**Status:** not started
+**Status:** done
 
 ---
 
@@ -102,7 +102,7 @@ error-handling around existing writes, not a storage format change.
 
 **Skills:** `production-readiness`, `distributed-systems` (Phase 12 gate)
 
-**Status:** not started
+**Status:** done
 
 ---
 

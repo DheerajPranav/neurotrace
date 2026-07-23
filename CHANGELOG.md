@@ -20,6 +20,14 @@ aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   previously the span recorded an empty response (see `examples/streaming_agent.py`).
   Tool-call deltas inside a stream are not assembled yet — only text
   content and usage.
+- `Tracer` no longer lets its own bookkeeping crash the traced run: a
+  storage backend that fails to save (full disk, locked file) or a
+  `redact` hook that raises now surfaces as a warning instead of
+  propagating out of `__exit__` and masking whatever the traced code was
+  actually doing.
+- `trace_openai` is idempotent — wrapping an already-traced client returns
+  it unchanged instead of nesting a second layer of instrumentation and
+  recording two spans per real call.
 
 ### Fixed
 

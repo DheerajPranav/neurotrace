@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import time
 import uuid
+import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
@@ -72,12 +73,30 @@ class Tracer:
     def __exit__(self, exc_type: object, exc: object, tb: object) -> bool:
         self.trace.ended_at = _utcnow()
         if self.storage is not None:
-            trace_to_persist = self.trace
-            if self._redact is not None:
-                trace_to_persist = replace(
-                    self.trace, events=[self._redact(e) for e in self.trace.events]
+            # The observer must not break the observed: a broken redact hook
+            # or a storage backend that can't write (disk full, locked file,
+            # permissions) must not raise out of __exit__, or it would mask
+            # whatever the `with` block itself was doing -- including, worst
+            # case, replacing a real exception from the traced code with an
+            # unrelated one from the tracer's own bookkeeping. The failure is
+            # surfaced as a warning rather than silently eaten: the trace for
+            # this run is simply not saved, which is a real, visible loss,
+            # just not a fatal one.
+            try:
+                trace_to_persist = self.trace
+                if self._redact is not None:
+                    trace_to_persist = replace(
+                        self.trace, events=[self._redact(e) for e in self.trace.events]
+                    )
+                self.storage.save_trace(trace_to_persist)
+            except Exception as save_exc:
+                warnings.warn(
+                    f"neurotrace: could not persist trace {self.trace.trace_id!r} "
+                    f"({type(save_exc).__name__}: {save_exc}) -- the traced run "
+                    "itself is unaffected, but this trace was not saved.",
+                    RuntimeWarning,
+                    stacklevel=2,
                 )
-            self.storage.save_trace(trace_to_persist)
         return False
 
     @contextmanager

@@ -393,5 +393,14 @@ class TracedOpenAI:
 
 
 def trace_openai(client: Any, tracer: Tracer) -> TracedOpenAI:
-    """Wrap an OpenAI client so its completions and tool calls land in `tracer`."""
+    """Wrap an OpenAI client so its completions and tool calls land in `tracer`.
+
+    Idempotent: wrapping an already-traced client returns it unchanged
+    instead of nesting a second layer of instrumentation around it. Without
+    this, a helper that calls `trace_openai` defensively (or a caller who
+    forgot the client was already wrapped) would record two llm_call spans,
+    one nested inside the other, for every real completion.
+    """
+    if isinstance(client, TracedOpenAI):
+        return client
     return TracedOpenAI(client, tracer)
