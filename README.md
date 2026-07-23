@@ -15,12 +15,11 @@ can inspect it after the fact instead of re-running blind.
 
 ## Status
 
-**v0.1.0** shipped capture, storage, the OpenAI-compatible adapter, a
-terminal timeline, a read-only JSON API, and a browser timeline. Since then
-(unreleased): a CI gate, an opt-in redaction hook, and full tracing of
-streamed completions — see `CHANGELOG.md` for what's changed and what's
-still a known gap. Design notes as they were decided are in
-`docs/architecture.md`.
+**v0.2.0** — capture, storage, the OpenAI-compatible adapter (including
+streamed completions), a terminal timeline, a read-only JSON API, a
+browser timeline, an opt-in redaction hook, and CI on every push. See
+`CHANGELOG.md` for what changed since v0.1.0 and what's still a known
+gap. Design notes as they were decided are in `docs/architecture.md`.
 
 ## Usage
 

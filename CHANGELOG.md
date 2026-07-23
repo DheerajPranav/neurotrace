@@ -6,6 +6,13 @@ aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-07-23
+
+A robustness pass: no new user-facing features, but the gaps that stood
+between "works on my machine" and "safe to depend on" — no CI, no way to
+opt out of verbatim storage, streaming silently broken, the tracer itself
+able to crash the thing it's observing.
+
 ### Added
 
 - CI on every push/PR (`.github/workflows/ci.yml`): `ruff check` + the full
@@ -20,6 +27,13 @@ aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   previously the span recorded an empty response (see `examples/streaming_agent.py`).
   Tool-call deltas inside a stream are not assembled yet — only text
   content and usage.
+
+### Fixed
+
+- The browser viewer now follows the operating system's light/dark preference
+  by default (via `prefers-color-scheme`) instead of always starting dark. An
+  explicit choice from the header theme toggle still overrides the OS and
+  persists across reloads.
 - `Tracer` no longer lets its own bookkeeping crash the traced run: a
   storage backend that fails to save (full disk, locked file) or a
   `redact` hook that raises now surfaces as a warning instead of
@@ -29,12 +43,17 @@ aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   it unchanged instead of nesting a second layer of instrumentation and
   recording two spans per real call.
 
-### Fixed
+### Known limitations
 
-- The browser viewer now follows the operating system's light/dark preference
-  by default (via `prefers-color-scheme`) instead of always starting dark. An
-  explicit choice from the header theme toggle still overrides the OS and
-  persists across reloads.
+- Tool-call deltas inside a streamed response aren't assembled — OpenAI
+  spreads a tool call's JSON arguments across many chunks keyed by index,
+  and that reassembly isn't implemented yet. Streamed text content and
+  usage are unaffected.
+- `redact_secrets` is pattern matching against known secret shapes and
+  sensitive key names, not a guarantee — freeform PII with neither is not
+  caught. Pass your own stricter callable if you need one.
+- Only the OpenAI-compatible wire format is adapted; Anthropic's native shape
+  would be a sibling adapter, not yet written.
 
 ## [0.1.0] — 2026-07-21
 
@@ -106,4 +125,5 @@ terminal timeline, a browser timeline, or JSON.
 - Only the OpenAI-compatible wire format is adapted; Anthropic's native shape
   would be a sibling adapter, not yet written.
 
+[0.2.0]: https://github.com/DheerajPranav/neurotrace/releases/tag/v0.2.0
 [0.1.0]: https://github.com/DheerajPranav/neurotrace/releases/tag/v0.1.0
