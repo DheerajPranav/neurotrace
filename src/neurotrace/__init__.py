@@ -6,6 +6,7 @@ from neurotrace.core.storage import (
     TraceSummary,
 )
 from neurotrace.core.tracer import Tracer
+from neurotrace.redaction import redact_secrets
 
 __all__ = [
     "Event",
@@ -16,5 +17,6 @@ __all__ = [
     "TraceSummary",
     "InMemoryStorage",
     "SQLiteStorage",
+    "redact_secrets",
 ]
 __version__ = "0.1.0"

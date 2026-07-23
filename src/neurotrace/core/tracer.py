@@ -12,11 +12,12 @@ from __future__ import annotations
 import time
 import uuid
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 
 from neurotrace.core.events import (
+    Event,
     Trace,
     error_event,
     llm_call_event,
@@ -57,9 +58,11 @@ class Tracer:
         name: str,
         storage: TraceStorage | None = None,
         metadata: dict[str, Any] | None = None,
+        redact: Callable[[Event], Event] | None = None,
     ) -> None:
         self.trace = Trace(trace_id=str(uuid.uuid4()), name=name, metadata=metadata or {})
         self.storage = storage
+        self._redact = redact
         self._parent_stack: list[str | None] = [None]
 
     def __enter__(self) -> "Tracer":
@@ -68,7 +71,12 @@ class Tracer:
     def __exit__(self, exc_type: object, exc: object, tb: object) -> bool:
         self.trace.ended_at = _utcnow()
         if self.storage is not None:
-            self.storage.save_trace(self.trace)
+            trace_to_persist = self.trace
+            if self._redact is not None:
+                trace_to_persist = replace(
+                    self.trace, events=[self._redact(e) for e in self.trace.events]
+                )
+            self.storage.save_trace(trace_to_persist)
         return False
 
     @contextmanager

@@ -143,7 +143,29 @@ unencrypted — that's what makes a trace useful, but it means a trace of a
 run whose system prompt embeds an API key, or whose tool arguments carry
 personal data, is now a plaintext copy of that data on disk.
 
-There is no redaction hook yet. Until there is:
+Default behavior is unchanged and stays verbatim — that's what makes a
+trace useful for debugging. If you can't accept that, `Tracer` takes an
+optional `redact` hook, applied to a copy of each event just before it's
+written to storage:
+
+```python
+from neurotrace import Tracer, redact_secrets
+
+with Tracer(name="agent", storage=storage, redact=redact_secrets) as tracer:
+    ...
+```
+
+`redact_secrets` is a best-effort built-in: it masks common secret shapes
+(`sk-...` keys, `Bearer ...` tokens, AWS access key ids) and any payload
+value whose key name looks sensitive (`api_key`, `password`, `token`,
+...), replacing matches with `[REDACTED]`. It is pattern matching, not a
+guarantee — freeform PII with no recognizable shape or telling key name
+will not be caught. Pass your own `Callable[[Event], Event]` if you need
+stricter behavior. Note the hook only affects what's persisted: the
+in-process `Tracer.trace` object your own code can inspect during the run
+stays verbatim.
+
+Regardless of whether you redact:
 
 - Keep trace files out of version control (`*.db` is already in `.gitignore`)
 - Treat a `.db` as sensitive as the conversation it recorded — don't attach

@@ -13,15 +13,22 @@ streaming is the known-broken path per `CHANGELOG.md`.
 
 | # | Milestone | Status |
 |---|---|---|
-| M1 | CI/CD gate | built + self-verified locally; **not yet pushed** (needs user go-ahead to commit/push before "ran green on GitHub" can be confirmed) |
-| M2 | Redaction hook | not started |
-| M3 | Streaming traced | not started |
-| M4 | Storage failure isolation | not started |
+| M1 | CI/CD gate | **done** — pushed as `6668a21`, `gh run list` confirms `completed success` on the matrix run |
+| M2 | Redaction hook | **done** |
+| M3 | Streaming traced | in progress |
+| M4 | Storage failure isolation | not started (scope note below) |
 
 ## Next action
 
-Awaiting user decision: commit + push M1 (to actually exercise the CI gate
-on GitHub), and/or continue straight into M2 (redaction hook) locally.
+M3: trace `create(stream=True)` fully in the OpenAI adapter.
+
+**Note for M4:** while verifying M2, found that a user-supplied `redact`
+callable raising inside `Tracer.__exit__` would currently propagate and
+break the traced agent — the exact failure mode M4 is meant to close for
+storage. Since it's the same code path (`__exit__`) and the same
+`no-crash-propagation` invariant, fold this into M4 rather than patching it
+twice: M4's fix should guard *both* `self._redact(e)` and
+`self.storage.save_trace(...)`, not storage alone.
 
 ## Session log
 
@@ -47,4 +54,23 @@ on GitHub), and/or continue straight into M2 (redaction hook) locally.
   boundary held), invariants in `context-graph.json` unaffected, full suite
   re-run independently. Not yet verifiable: whether the workflow actually
   runs green on GitHub — that requires a push, which needs the user's
-  go-ahead first.
+  go-ahead first. **Resolved:** pushed as `6668a21`; `gh run list` confirmed
+  `completed success`.
+
+- 2026-07-23 — M2 BUILD: added `src/neurotrace/redaction.py`
+  (`redact_secrets`, pattern-based on secret shapes plus sensitive key
+  names, applied via a generic recursive payload walk) and an optional
+  `redact` param on `Tracer.__init__`, applied once in `__exit__` to a copy
+  of the trace before it's handed to storage — the in-process
+  `self.trace` is never mutated. Exported `redact_secrets` from
+  `neurotrace/__init__.py`. Updated README's "Data handling" section to
+  document the hook instead of only the gap (DONE.html gate). Found and
+  fixed a real bug during testing: the first pass only regex-matched
+  string *content* (`api_key=...`), so a bare secret stored as a dict
+  *value* under a key like `api_key` (no `=` in the string itself) slipped
+  through — added a sensitive-key-name check alongside the content
+  patterns. `tests/test_redaction.py` (9 tests) covers: content-pattern
+  matches, nested-key matches, error-message redaction, verbatim-by-default
+  regression, in-process-trace-untouched, and redaction still applying on
+  the partial-trace-after-exception path. Full suite: 67 passed (58 + 9),
+  lint clean. Freeze boundary held — no viewer/API files touched.
